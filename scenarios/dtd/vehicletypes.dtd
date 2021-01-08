@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+        <!ELEMENT vehicletypes (type)*>
+
+        <!ELEMENT type EMPTY>
+
+        <!-- name - type name -->
+        <!-- consumption - vehicle energy consumption in kWh per 100 km -->
+        <!-- max_charging_rate - maximum c-rate during charging -->
+        <!-- weight - vehicle weight in kg -->
+        <!-- width - vehicle width in m -->
+        <!-- height - vehicle height in m -->
+        <!-- length - vehicle length in m -->
+        <!-- cw - aerodynamic drag coefficient -->
+        <!-- ft - rolling drag coefficient -->
+        <!-- cb - inertia resistance coefficient -->
+        <!-- spr - efficiency of vehicle drive train -->
+        <!ATTLIST type
+                name CDATA #REQUIRED
+                consumption CDATA #REQUIRED
+                max_charging_rate CDATA #REQUIRED
+                mass CDATA #REQUIRED
+                width CDATA #REQUIRED
+                height CDATA #REQUIRED
+                length CDATA #REQUIRED
+                cw CDATA #REQUIRED
+                ft CDATA #REQUIRED
+                cb CDATA #REQUIRED
+                spr CDATA #REQUIRED>

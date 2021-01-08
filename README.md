@@ -1,1 +1,79 @@
 # UrbanEV
+
+UrbanEV is a simulation framework for urban electromobility based on the MATSim transport simulation framework 
+(https://github.com/matsim-org) and its electric vehicle contribution (https://github.com/matsim-org/matsim-libs/tree/master/contribs/ev).
+
+## Project Structure
+Directories are structured as follows:
+* `src` for sources
+* `scenarios` for MATSim scenarios, i.e. MATSim input and output data.
+  * One subdirectory for each scenario:
+    * `scenarios/munich` (examplary main scenario with different population sizes).
+  * Each scenario needs to comprise the following files:
+    * config file
+    * network file
+    * population file
+    * chargers file
+    * electric vehicles file
+  * The output files will usually be created one level deeper, e.g. `scenarios/munich/1000/output/...`.
+
+## Requirements
+
+The following requirements are to be met to build and execute matsim-urban-ev:
+
+* maven
+* java development kit (jdk) version 8 or newer
+
+## Dependencies
+
+All dependencies are managed by maven. Therefore, dependencies are automatically installed during deployment.
+
+## Run from console
+
+1. clone repo into directory
+```console
+git clone https://github.com/TUMFTM/urbanev
+```  
+2. make jar file to run
+```console
+sudo mvn clean install
+```  
+3. run (arg: config file path):
+```console
+sudo java -Xms16g -Xmx16g -jar target/urban_ev-0.1-jar-with-dependencies.jar scenarios/munich/1000/config.xml
+```
+
+## Import into IntelliJ
+
+1. Open IntelliJ
+2. Click on *Import Project*
+3. Select *pom.xml* in project folder and click open
+4. Select JDK 1.8
+5. Click *Next* until done
+6. To run simulation: add configuration with main class *de.tum.mw.ftm.matsim.project.RunMATSimUrbanEV* and program args
+
+## Contributing and Support
+
+For contributing to the code please contact:  
+
+Lennart Adenaw  
+Chair of Automotive Technology  
+Technical University of Munich  
+  
+mail: lennart.adenaw@tum.de
+
+## Versioning
+
+V0.1 
+
+## Authors
+
+Lennart Adenaw, Julius Drosten
+
+## License
+
+This project is licensed under the LGPL License - see the LICENSE.md file for details. The project is built upon contributions by the MATSim community which are themselves licensed under the LGPL License. Files that were directly adapted from such projects contain modification notices and the original license texts. 
+
+## Paper
+
+Paper will be linked here when published.

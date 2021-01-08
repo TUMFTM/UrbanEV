@@ -1,0 +1,94 @@
+<?xml version="1.0" ?>
+<!DOCTYPE config SYSTEM "http://www.matsim.org/files/dtd/config_v2.dtd">
+<config>
+
+	<module name="ev">
+		<param name="auxDischargeTimeStep" value="10"/>
+		<param name="chargeTimeStep" value="5"/>
+		<param name="chargersFile" value="../chargers.xml"/>
+		<param name="timeProfiles" value="true"/>
+		<param name="vehiclesFile" value="evehicles.xml"/>
+	</module>
+
+	<module name="urban_ev">
+		<param name="parkingSearchRadius" value="500"/>
+		<param name="defaultRangeAnxietyThreshold" value="0.2"/>
+		<param name="vehicleTypesFile" value="../vehicletypes.xml"/>
+		<param name="rangeAnxietyUtility" value="-5"/>
+		<param name="emptyBatteryUtility" value="-10"/>
+		<param name="walkingUtility" value="-1"/>
+		<param name="homeChargingUtility" value="+1"/>
+		<param name="socDifferenceUtility" value="-10"/>
+		<param name="maxNumberSimultaneousPlanChanges" value="2"/>
+		<param name="timeAdjustmentProbability" value="0.1"/>
+		<param name="maxTimeFlexibility" value="600"/>
+		<param name="generateHomeChargersByPercentage" value="false"/>
+		<param name="homeChargerPercentage" value="80"/>
+		<param name="defaultHomeChargerPower" value="11"/>
+		<param name="generateWorkChargersByPercentage" value="false"/>
+		<param name="workChargerPercentage" value="20"/>
+		<param name="defaultWorkChargerPower" value="11"/>
+	</module>
+
+	<module name="global">
+		<param name="randomSeed" value="4711" />
+		<param name="coordinateSystem" value="EPSG:31468" />
+	</module>
+
+	<module name="network">
+		<param name="inputNetworkFile" value="../cleaned_network.xml" />
+		<param name="timeVariantNetwork" value="false" />
+		<param name="inputChangeEventsFile" value="null" />
+	</module>
+
+	<module name="plans">
+		<param name="inputPlansFile" value="population.xml" />
+	</module>
+
+	<module name="controler">
+		<param name="outputDirectory" value="scenarios/munich/1000/output" />
+		<param name="overwriteFiles" value="deleteDirectoryIfExists" />
+		<param name="firstIteration" value="0"/>
+		<param name="lastIteration" value="50"/>
+		<param name="eventsFileFormat" value="xml"/>
+		<param name="mobsim" value="qsim"/>
+		<param name="writeEventsInterval" value="50"/>
+		<param name="writePlansInterval" value="50"/>
+		<param name="routingAlgorithmType" value="FastAStarLandmarks" />
+	</module>
+
+	<module name="qsim">
+		<!-- "start/endTime" of MobSim (00:00:00 == take earliest activity time/ run as long as active vehicles exist) -->
+		<param name="startTime" value="00:00:00"/>
+		<param name="endTime" value="240:00:00"/>
+	</module>
+
+	<module name= "strategy">
+		<!-- fraction of iterations where innovative strategies are switched off.  Something like 0.8 should be good.  E.g. if you run from iteration 400 to iteration 500, innovation is switched off at iteration 480 -->
+		<param name="fractionOfIterationsToDisableInnovation" value="0.8" />
+		<!-- maximum number of plans per agent.  ``0'' means ``infinity''. -->
+		<param name="maxAgentPlanMemorySize" value="5" />
+		<parameterset type= "strategysettings">
+			<param name= "strategyName" value= "SelectExpBeta"/>
+			<param name= "weight" value= "0.7"/>
+			<param name= "subpopulation" value= "nonCriticalSOC"/>
+		</parameterset>
+		<parameterset type= "strategysettings">
+			<param name= "strategyName" value= "ChangeChargingBehaviour"/>
+			<param name= "weight" value= "0.3"/>
+			<param name= "subpopulation" value= "nonCriticalSOC"/>
+		</parameterset>
+		<parameterset type= "strategysettings">
+			<param name= "strategyName" value= "SelectExpBeta"/>
+			<param name= "weight" value= "0"/>
+			<param name= "subpopulation" value= "criticalSOC"/>
+		</parameterset>
+		<parameterset type= "strategysettings">
+			<param name= "strategyName" value= "ChangeChargingBehaviour"/>
+			<param name= "weight" value= "1"/>
+			<param name= "subpopulation" value= "criticalSOC"/>
+		</parameterset>
+	</module>
+
+
+</config>

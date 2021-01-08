@@ -1,0 +1,4 @@
+- 10000 agents
+- 10 days
+- 83% home chargers
+- 20% work chargers

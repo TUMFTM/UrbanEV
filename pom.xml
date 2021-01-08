@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.tum.mw.ftm.matsim</groupId>
+	<artifactId>urban_ev</artifactId>
+	<version>0.1</version>
+
+	<properties>
+		<!-- release> -->
+		<matsim.version>12.0</matsim.version>
+
+	</properties>
+
+	<repositories>
+		<!--Note that in general repositories are not transitive, so they need to be repeated at every level where needed.-->
+		<repository>
+			<!-- Repository for MATSim releases (MATSim is not on Maven central) -->
+			<id>matsim</id>
+			<url>https://dl.bintray.com/matsim/matsim</url>
+		</repository>
+		<repository>
+			<id>osgeo</id>
+			<name>OSGeo Release Repository</name>
+			<url>https://repo.osgeo.org/repository/release/</url>
+			<snapshots><enabled>false</enabled></snapshots>
+			<releases><enabled>true</enabled></releases>
+		</repository>
+		<repository>
+			<!-- For MATSim snapshots: -->
+			<id>ojo-snapshots</id>
+			<url>http://oss.jfrog.org/libs-snapshot</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<!-- This is the matsim "core": -->
+			<groupId>org.matsim</groupId>
+			<artifactId>matsim</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+
+		<!--ev contribution-->
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>ev</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>dvrp</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+
+		<!-- Include the JUnit testing library and MATSim test infrastructure if needed.
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.matsim</groupId>
+			<artifactId>matsim</artifactId>
+			<type>test-jar</type>
+			<version>${matsim.version}</version>
+			<scope>test</scope>
+		</dependency>
+		-->
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<showWarnings>false</showWarnings>
+					<showDeprecation>false</showDeprecation>
+					<encoding>UTF-8</encoding>
+					<!-- configure initial and maximal memory for compiling -->
+					<fork>true</fork>
+					<meminitial>128m</meminitial>
+					<maxmem>4096m</maxmem>
+					<compilerArguments>
+						<Xmaxwarns>4000</Xmaxwarns>
+						<Xmaxerrs>100</Xmaxerrs>
+					</compilerArguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>de.tum.mw.ftm.matsim.project.RunMATSimUrbanEV</mainClass>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+						<manifestEntries>
+							<Specification-Vendor>de.tum.mw.ftm.matsim</Specification-Vendor>
+							<Implementation-Vendor>de.tum.mw.ftm.matsim</Implementation-Vendor>
+						</manifestEntries>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+
+
+</project>
