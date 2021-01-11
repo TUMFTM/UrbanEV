@@ -66,7 +66,7 @@ Lennart Adenaw, Julius Drosten
 
 ## License
 
-This project is licensed under the LGPL License - see the LICENSE.md file for details. The project is built upon contributions by the MATSim community which are themselves licensed under the LGPL License. Files that were directly adapted from such projects contain modification notices and the original license texts. 
+This project is licensed under the GPL License - see the LICENSE.md file for details. The project is built upon contributions by the MATSim community which are themselves licensed under the GPL License. Files that were directly adapted from such projects contain modification notices and the original license texts. 
 
 ## Paper
 
