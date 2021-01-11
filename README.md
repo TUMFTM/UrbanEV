@@ -22,7 +22,10 @@ Directories are structured as follows:
 The following requirements are to be met to build and execute matsim-urban-ev:
 
 * maven
-* java development kit (jdk) version 8 or newer
+* OpenJDK 11
+```console
+sudo apt-get install openjdk-11-jdk
+```  
 
 ## Dependencies
 
@@ -42,15 +45,6 @@ sudo mvn clean install
 ```console
 sudo java -Xms16g -Xmx16g -jar target/urban_ev-0.1-jar-with-dependencies.jar scenarios/munich/1000/config.xml
 ```
-
-## Import into IntelliJ
-
-1. Open IntelliJ
-2. Click on *Import Project*
-3. Select *pom.xml* in project folder and click open
-4. Select JDK 1.8
-5. Click *Next* until done
-6. To run simulation: add configuration with main class *de.tum.mw.ftm.matsim.project.RunMATSimUrbanEV* and program args
 
 ## Contributing and Support
 
