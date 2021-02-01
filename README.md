@@ -68,6 +68,8 @@ Lennart Adenaw, Julius Drosten
 
 This project is licensed under the GPL License - see the LICENSE.md file for details. The project is built upon contributions by the MATSim community which are themselves licensed under the GPL License. Files that were directly adapted from such projects contain modification notices and the original license texts. 
 
-## Paper
+## Associated Article
 
-Paper will be linked here when published.
+Please also check the associated article available in the World Electric Vehicle Journal:
+
+Adenaw, L.; Lienkamp, M. Multi-Criteria, Co-Evolutionary Charging Behavior: An Agent-Based Simulation of Urban Electromobility. *World Electr. Veh. J.* **2021**, *12*, 18. https://doi.org/10.3390/wevj12010018 
