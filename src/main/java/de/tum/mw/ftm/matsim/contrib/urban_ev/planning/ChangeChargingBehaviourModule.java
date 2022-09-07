@@ -4,14 +4,16 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEventHandler;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
 import org.matsim.core.replanning.ReplanningContext;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ChangeChargingBehaviourModule implements PlanStrategyModule, ChargingBehaviourScoringEventHandler {
 
@@ -20,7 +22,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
 
     private Random random = new Random();
     private Scenario scenario;
-    private Network network;
     private Population population;
     private UrbanEVConfigGroup evCfg;
     private int maxNumberSimultaneousPlanChanges;
@@ -29,7 +30,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
 
     ChangeChargingBehaviourModule(Scenario scenario) {
         this.scenario = scenario;
-        this.network = this.scenario.getNetwork();
         this.population = this.scenario.getPopulation();
         this.evCfg = (UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev");
         this.maxNumberSimultaneousPlanChanges = evCfg.getMaxNumberSimultaneousPlanChanges();
@@ -43,76 +43,120 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
 
     @Override
     public void handlePlan(Plan plan) {
+
+        // retrieve number of plan changes to apply
         int numberOfChanges = 1 + random.nextInt(maxNumberSimultaneousPlanChanges);
+        
+        // retrieve relevant person characteristics
+        Person person = plan.getPerson();
+        Attributes personAttributes = person.getAttributes();
+        double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
+        double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
+        String subpopulation = personAttributes.getAttribute("subpopulation").toString();
 
+        // derived person characteristics
+        Boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
+        Boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
+        Boolean personCriticalSOC = subpopulation.equals("criticalSOC");
 
-        for (int c = 0; c < numberOfChanges; c++ ) {
-            List<PlanElement> planElements = plan.getPlanElements();
-            int max = planElements.size();
+        // retrieve person charging history
+        List<PlanElement> planElements = plan.getPlanElements();
+        int planSize = planElements.size();
 
-            // get activity ids of activities with and without charging
-            ArrayList<Integer> successfulChargingActIds = new ArrayList<>();
-            ArrayList<Integer> failedChargingActIds = new ArrayList<>();
-            ArrayList<Integer> noChargingActIds = new ArrayList<>();
+        // Todo: probably switch to sets
+        ArrayList<Integer> successfulChargingActIds = new ArrayList<>();
+        ArrayList<Integer> failedChargingActIds = new ArrayList<>();
+        ArrayList<Integer> noChargingActIds = new ArrayList<>();
+        ArrayList<Integer> workActIds = new ArrayList<>();
+        ArrayList<Integer> homeActIds = new ArrayList<>();
+        ArrayList<Integer> otherActIds = new ArrayList<>();
 
-            // loop starts at 2 because car should never be charging at start of simulation
-            for (int i = 2; i < max; i++) {
-                PlanElement pe = planElements.get(i);
-                if (pe instanceof Activity) {
-                    Activity act = (Activity) pe;
-                    if (act.getType().endsWith(CHARGING_IDENTIFIER)) {
-                        successfulChargingActIds.add(i);
-                    } else if (act.getType().endsWith(CHARGING_FAILED_IDENTIFIER)) {
-                        // remove and possibly change activity or time
-                        failedChargingActIds.add(i);
-                        act.setType(act.getType().replace(CHARGING_FAILED_IDENTIFIER, ""));
-                    } else {
-                        noChargingActIds.add(i);
-                    }
-                }
-            }
-
-            // with some probability try changing start time of failed charging activity (end time of previous activity)
-            if (failedChargingActIds.size() > 0 && random.nextDouble() < timeAdjustmentProbability) {
-                changeChargingActivityTime(planElements, failedChargingActIds);
-            } else {
-                // number of charging attempts that were successful
-                int nSuccessfulCharging = successfulChargingActIds.size();
-                // number of failed charging attempts
-                int nFailedCharging = failedChargingActIds.size();
-                // number of activities without charging attempt
-                int nNoCharging = noChargingActIds.size();
-                // sum of activities with successful attempts and activities without charging attempts
-                int nTotal = nSuccessfulCharging + nNoCharging;
-
-                // assign weights to different strategies based on successful and failed attempts
-                double wChangeFailed = (nFailedCharging == 0 || nNoCharging == 0) ? 0 : 2;
-                double wChangeSuccessful = (nSuccessfulCharging == 0 || nNoCharging == 0) ? 0 : 1;
-                double wAdd = (double) nNoCharging / nTotal;
-                double wRemove = (double) nSuccessfulCharging / nTotal;
-
-                // decide which strategy to use: add/remove/change
-                // Todo: Beautify and simplify this!
-                double sumOfWeights = wAdd + wRemove + wChangeSuccessful + wChangeFailed;
-                double w = sumOfWeights * random.nextDouble();
-                w -= wChangeFailed;
-                if (w <= 0) {
-                    changeChargingActivity(planElements, failedChargingActIds, noChargingActIds);
+        for (int i = 1; i < planSize; i++) {
+            PlanElement pe = planElements.get(i);
+            
+            // identify the charging status of each plan element
+            if (pe instanceof Activity) {
+                Activity act = (Activity) pe;
+                String actType = act.getType();
+                if (actType.endsWith(CHARGING_IDENTIFIER)) {
+                    successfulChargingActIds.add(i);
+                } else if (actType.endsWith(CHARGING_FAILED_IDENTIFIER)) {
+                    // remove and possibly change activity or time
+                    failedChargingActIds.add(i);
+                    act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, ""));
                 } else {
-                    w -= wChangeSuccessful;
-                    if (w <= 0) {
-                        changeChargingActivity(planElements, successfulChargingActIds, noChargingActIds);
-                    } else {
-                        w -= wAdd;
-                        if (w <= 0) {
-                            addChargingActivity(planElements, noChargingActIds);
-                        } else {
-                            removeChargingActivity(planElements, successfulChargingActIds);
-                        }
-                    }
+                    noChargingActIds.add(i);
+                }
+            
+                // identify home, work, and other plan elements
+                
+                if(actType.contains("home")){
+                    homeActIds.add(i);
+                }
+                else if(actType.contains("work")){
+                    workActIds.add(i);
+                }
+                else{
+                    otherActIds.add(i);
                 }
             }
         }
+
+        // derived activity characteristics
+        ArrayList<Integer> allChargingActIds = new ArrayList<Integer>(Stream.of(successfulChargingActIds, failedChargingActIds).flatMap(x -> x.stream()).collect(Collectors.toList()));
+        ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !homeActIds.contains(element)).collect(Collectors.toList()));
+        ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !workActIds.contains(element)).collect(Collectors.toList()));
+        ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !otherActIds.contains(element)).collect(Collectors.toList()));
+
+        // charging options
+        Boolean remainingHomeChargingOpportunities = homeActsWithoutCharging.size() > 0 ? true : false;
+        Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
+        Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
+
+        // Apply plan changes
+        for (int c = 0; c < numberOfChanges; c++) {
+            
+            // Todo: Care for failed charging activities: Adjust time and/or move 
+
+            if(personCriticalSOC){
+                if(personHasHomeCharger & remainingHomeChargingOpportunities){
+                    // critical soc and home charger
+                    addChargingActivity(planElements, homeActsWithoutCharging);
+                }
+                else if(personHasWorkCharger & remainingWorkChargingOpportunities){
+                    // critical soc and work, but no home charger 
+                    addChargingActivity(planElements, workActsWithoutCharging);
+                }
+                else if(remainingOtherChargingOpportunities){
+                    // critical soc, but neither home nor work charger
+                    addChargingActivity(planElements, otherActsWithoutCharging); // Add charging activity to any activity without charging
+                }
+                else{
+                    // critical but already used up all charging opportunities
+                    changeChargingActivityTime(planElements, failedChargingActIds);
+                }
+            }
+            else{
+                // non crictical soc
+                if (failedChargingActIds.size() > 0 && random.nextDouble() < timeAdjustmentProbability) {
+                    // with some probability try changing start time of failed charging activity (end time of previous activity)
+                    changeChargingActivityTime(planElements, failedChargingActIds);
+                } else {
+                    int randAction = random.nextInt(2);
+                    // Otherwise randomly change or remove a charging activity
+                    switch(randAction) {
+                        case 0:
+                            changeChargingActivity(planElements, allChargingActIds, noChargingActIds);
+                            break;
+                        case 1:
+                            removeChargingActivity(planElements, successfulChargingActIds);
+                            break;
+                    }
+                }
+            }
+            
+            }
+
     }
 
     private void changeChargingActivityTime(List<PlanElement> planElements, ArrayList<Integer> failedChargingActIds) {
