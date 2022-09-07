@@ -63,58 +63,58 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
         List<PlanElement> planElements = plan.getPlanElements();
         int planSize = planElements.size();
 
-        // Todo: probably switch to sets
-        ArrayList<Integer> successfulChargingActIds = new ArrayList<>();
-        ArrayList<Integer> failedChargingActIds = new ArrayList<>();
-        ArrayList<Integer> noChargingActIds = new ArrayList<>();
-        ArrayList<Integer> workActIds = new ArrayList<>();
-        ArrayList<Integer> homeActIds = new ArrayList<>();
-        ArrayList<Integer> otherActIds = new ArrayList<>();
-
-        for (int i = 1; i < planSize; i++) {
-            PlanElement pe = planElements.get(i);
-            
-            // identify the charging status of each plan element
-            if (pe instanceof Activity) {
-                Activity act = (Activity) pe;
-                String actType = act.getType();
-                if (actType.endsWith(CHARGING_IDENTIFIER)) {
-                    successfulChargingActIds.add(i);
-                } else if (actType.endsWith(CHARGING_FAILED_IDENTIFIER)) {
-                    // remove and possibly change activity or time
-                    failedChargingActIds.add(i);
-                    act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, ""));
-                } else {
-                    noChargingActIds.add(i);
-                }
-            
-                // identify home, work, and other plan elements
-                
-                if(actType.contains("home")){
-                    homeActIds.add(i);
-                }
-                else if(actType.contains("work")){
-                    workActIds.add(i);
-                }
-                else{
-                    otherActIds.add(i);
-                }
-            }
-        }
-
-        // derived activity characteristics
-        ArrayList<Integer> allChargingActIds = new ArrayList<Integer>(Stream.of(successfulChargingActIds, failedChargingActIds).flatMap(x -> x.stream()).collect(Collectors.toList()));
-        ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !homeActIds.contains(element)).collect(Collectors.toList()));
-        ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !workActIds.contains(element)).collect(Collectors.toList()));
-        ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !otherActIds.contains(element)).collect(Collectors.toList()));
-
-        // charging options
-        Boolean remainingHomeChargingOpportunities = homeActsWithoutCharging.size() > 0 ? true : false;
-        Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
-        Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
-
         // Apply plan changes
         for (int c = 0; c < numberOfChanges; c++) {
+
+            // Todo: probably switch to sets, prevent total reevaluation
+            ArrayList<Integer> successfulChargingActIds = new ArrayList<>();
+            ArrayList<Integer> failedChargingActIds = new ArrayList<>();
+            ArrayList<Integer> noChargingActIds = new ArrayList<>();
+            ArrayList<Integer> workActIds = new ArrayList<>();
+            ArrayList<Integer> homeActIds = new ArrayList<>();
+            ArrayList<Integer> otherActIds = new ArrayList<>();
+
+            for (int i = 1; i < planSize; i++) {
+                PlanElement pe = planElements.get(i);
+                
+                // identify the charging status of each plan element
+                if (pe instanceof Activity) {
+                    Activity act = (Activity) pe;
+                    String actType = act.getType();
+                    if (actType.endsWith(CHARGING_IDENTIFIER)) {
+                        successfulChargingActIds.add(i);
+                    } else if (actType.endsWith(CHARGING_FAILED_IDENTIFIER)) {
+                        // remove and possibly change activity or time
+                        failedChargingActIds.add(i);
+                        act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, ""));
+                    } else {
+                        noChargingActIds.add(i);
+                    }
+                
+                    // identify home, work, and other plan elements
+                    
+                    if(actType.contains("home")){
+                        homeActIds.add(i);
+                    }
+                    else if(actType.contains("work")){
+                        workActIds.add(i);
+                    }
+                    else{
+                        otherActIds.add(i);
+                    }
+                }
+            }
+
+            // derived activity characteristics
+            ArrayList<Integer> allChargingActIds = new ArrayList<Integer>(Stream.of(successfulChargingActIds, failedChargingActIds).flatMap(x -> x.stream()).collect(Collectors.toList()));
+            ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !homeActIds.contains(element)).collect(Collectors.toList()));
+            ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !workActIds.contains(element)).collect(Collectors.toList()));
+            ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !otherActIds.contains(element)).collect(Collectors.toList()));
+
+            // charging options
+            Boolean remainingHomeChargingOpportunities = homeActsWithoutCharging.size() > 0 ? true : false;
+            Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
+            Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
 
             if(personCriticalSOC){
                 if(personHasHomeCharger & remainingHomeChargingOpportunities){
