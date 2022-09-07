@@ -116,6 +116,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
             Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
             Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
 
+            // Todo: Consider to add some randomness for the critical persons as well (e.g. switch charging activities instead of adding)
             if(personCriticalSOC){
                 if(personHasHomeCharger & remainingHomeChargingOpportunities){
                     // critical soc and home charger
@@ -126,7 +127,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                     addChargingActivity(planElements, workActsWithoutCharging);
                 }
                 else if(remainingOtherChargingOpportunities){
-                    // critical soc, but neither home nor work charger
+                    // critical soc, but neither home nor work charger // Todo: These persons might also want to prioritize home charging/work charging before any other charging
                     addChargingActivity(planElements, otherActsWithoutCharging); // Add charging activity to any activity without charging
                 }
                 else if(failedChargingActIds.size()>0){
@@ -144,9 +145,24 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                     changeChargingActivityTime(planElements, failedChargingActIds);
                 } else {
                     // if no failed charging activties exist or time should not be adjusted: randomly change, remove, or add a charging activity if possible
-                    int randAction = random.nextInt(3);
-                    
-                    switch(randAction) {
+                    double randAction = random.nextDouble();
+                    int randActionSelector;
+
+                    if(0<=randAction&randAction<0.2){
+                        // changeChargingActivity
+                        randActionSelector=0;
+                    }
+                    else if(0.2<=randAction&randAction<0.8){
+                        // removeChargingActivity
+                        randActionSelector=1;
+                    }
+                    else
+                    {
+                        // addChargingActivity
+                        randActionSelector=2;
+                    }
+
+                    switch(randActionSelector) {
                         case 0:
                             if(noChargingActIds.size()>0&allChargingActIds.size()>0){
                                 changeChargingActivity(planElements, allChargingActIds, noChargingActIds);
@@ -160,12 +176,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                             }
 
                         case 2:
-                            if(noChargingActIds.size()>0){
-                                addChargingActivity(planElements, noChargingActIds);
-                                break;
-                            }
-                        default:
-                            // In case no charging activity can be moved or removed (cases 0 and 1), add one if possible
                             if(noChargingActIds.size()>0){
                                 addChargingActivity(planElements, noChargingActIds);
                                 break;
