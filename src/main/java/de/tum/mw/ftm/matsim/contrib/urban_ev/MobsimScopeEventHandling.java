@@ -267,5 +267,14 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 				.build();
 
 		chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
+
+		// Also add the corresponding person attribute in case it was not set by the config
+		if(activityType.contains("home")){
+			person.getAttributes().putAttribute("homeChargerPower", String.valueOf(power));
+		}
+		else{
+			person.getAttributes().putAttribute("workChargerPower", String.valueOf(power));
+		}
+			
 	}
 }
