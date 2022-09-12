@@ -56,20 +56,25 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 score += delta_score;
             }
 
-            // punish walking distance (only when charging)
-            double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
-            if (activityType.contains(CHARGING_IDENTIFIER)) {
-
-                // inverted utility based on Geurs, van Wee 2004 Equation (1)
-                double beta = 0.005;
-                double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(-beta * walkingDistance));
-                chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.WALKING_DISTANCE, delta_score);
-                chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.WALKING_DISTANCE, person.getId());
-                score += delta_score;
-            }
-
-            // reward charging at home
             boolean hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
+
+            // punish walking distance
+            double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
+            if (activityType.contains(CHARGING_IDENTIFIER)&walkingDistance>0) {
+                if(!activityType.contains("home") && !activityType.contains("work")){
+                    // Punish charging with walking distance > 0 only if it is not performed at work or home
+
+                    // inverted utility based on Geurs, van Wee 2004 Equation (1)
+                    double beta = 0.005;
+                    double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(-beta * walkingDistance));
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.WALKING_DISTANCE, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.WALKING_DISTANCE, person.getId());
+                    score += delta_score;
+                }                
+            }
+            
+            // reward charging at home
+            
             if (activityType.equals("home" + CHARGING_IDENTIFIER) && hasChargerAtHome) {
                 double delta_score = params.utilityOfHomeCharging;
                 chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.HOME_CHARGING, delta_score);
