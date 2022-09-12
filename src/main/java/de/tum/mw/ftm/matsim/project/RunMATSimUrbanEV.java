@@ -14,6 +14,7 @@ import org.matsim.contrib.ev.EvConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.PlansConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.mobsim.qsim.AbstractQSimModule;
@@ -80,13 +81,16 @@ public class RunMATSimUrbanEV {
 
 				// use new vehicles file for next initialization
 				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
+				PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
 				evConfigGroup.setVehiclesFile("output/init" + Integer.toString(repetition) + "/output_evehicles.xml");
-				
+				plansConfigGroup.setInputFile("output/init" + Integer.toString(repetition) + "/output_plans.xml.gz");
 			}
 
 			// use new vehicles file for training
 			EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
+			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
 			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_evehicles.xml");
+			plansConfigGroup.setInputFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_plans.xml.gz");
 			config.controler().setOutputDirectory(baseOutputDirectory + "/train");
 		}
 
