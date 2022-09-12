@@ -39,13 +39,20 @@ public class RunMATSimUrbanEV {
 
 		String configPath = "";
 		int initIterations = 0;
+		int initIterationRepetitions = 0;
 
-		if (args != null && args.length == 2) {
+		if (args != null && args.length == 3) {
 			configPath = args[0];
 			initIterations = Integer.parseInt(args[1]);
+			initIterationRepetitions = Integer.parseInt(args[2]);
+		} else if (args != null && args.length == 2){
+			configPath = args[0];
+			initIterations = Integer.parseInt(args[1]);
+			initIterationRepetitions = 0;
 		} else if (args != null && args.length == 1){
 			configPath = args[0];
 			initIterations = 0;
+			initIterationRepetitions = 0;
 		}
 		else{
 			System.out.println("Config file missing. Please supply a config file path as a program argument.");
@@ -59,17 +66,31 @@ public class RunMATSimUrbanEV {
 		Config config = ConfigUtils.loadConfig(configPath, configGroups);
 
 		if (initIterations > 0) {
+			
 			Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
 			initConfig.controler().setLastIteration(initIterations);
-			initConfig.controler().setOutputDirectory(initConfig.controler().getOutputDirectory() + "/init");
-			loadConfigAndRun(initConfig);
+			String baseOutputDirectory = initConfig.controler().getOutputDirectory();
+
+			// If initialization iterations are needed
+			for(int repetition = 0; repetition <= initIterationRepetitions; repetition++)
+			{
+				String outputDirectory = baseOutputDirectory + "/init" + Integer.toString(repetition);
+				initConfig.controler().setOutputDirectory(outputDirectory);
+				loadConfigAndRun(initConfig);
+
+				// use new vehicles file for next initialization
+				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
+				evConfigGroup.setVehiclesFile("output/init" + Integer.toString(repetition) + "/output_evehicles.xml");
+				
+			}
 
 			// use new vehicles file for training
-			EvConfigGroup evConfigGroup = (EvConfigGroup) config.getModules().get("ev");
-			evConfigGroup.setVehiclesFile("output/init/output_evehicles.xml");
-			config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "/train");
+			EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
+			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_evehicles.xml");
+			config.controler().setOutputDirectory(baseOutputDirectory + "/train");
 		}
 
+		// Start final run
 		loadConfigAndRun(config);
 
 	}
