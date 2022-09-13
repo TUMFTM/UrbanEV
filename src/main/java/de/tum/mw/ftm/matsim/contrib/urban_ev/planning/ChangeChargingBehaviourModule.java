@@ -150,13 +150,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                 // non crictical soc
 
                 // Handling of failed charging activities: This is an extra action that does not count for the max number of plan changes
-                if (failedChargingActIds.size() > 0 && random.nextDouble() < timeAdjustmentProbability) {
-                    // if failed charging activities exist: with some probability try changing start time of failed charging activity (end time of previous activity)
-                    changeChargingActivityTime(planElements, failedChargingActIds);
-                } else {
-                    // with probability 1-timeAdjustmentProbability just remove a failed charging activity, because it is not needed anyways
-                    removeChargingActivity(planElements, failedChargingActIds);
+                if (failedChargingActIds.size()>0)
+                {
+                    if (random.nextDouble() < timeAdjustmentProbability) {
+                        // With some probability try changing start time of failed charging activity (end time of previous activity)
+                        changeChargingActivityTime(planElements, failedChargingActIds);
+                    } else {
+                        // with probability 1-timeAdjustmentProbability just remove a failed charging activity, because it is not needed anyways
+                        removeChargingActivity(planElements, failedChargingActIds);
+                    }
                 }
+                
                 
                 // In addition to handling failed charging activities: randomly change, remove, or add a charging activity if possible
                 double randAction = random.nextDouble();
@@ -252,27 +256,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
     private void changeChargingActivity(List<PlanElement> planElements,
                                 ArrayList<Integer> chargingActIds,
                                 ArrayList<Integer> noChargingActIds) {
-        // select random activity with charging and change to activity without charging
-        int chargingActId = chargingActIds.get(random.nextInt(chargingActIds.size()));
-        Activity selectedActivity = (Activity) planElements.get(chargingActId);
-        selectedActivity.setType(selectedActivity.getType().replace(CHARGING_IDENTIFIER, ""));
-
-        // select activity without charging close to original activity using gaussian distribution and change to activity with charging
-        double gaussId = 0.0;
-        while (gaussId < 1 || gaussId > planElements.size()) {
-            gaussId = 5 * random.nextGaussian() + chargingActId;
-        }
-        double dMin = planElements.size();
-        int closestNoChargingActId = 0;
-        for (int noChargingActId : noChargingActIds) {
-            double d = Math.abs(gaussId - noChargingActId);
-            if (d < dMin) {
-                dMin = d;
-                closestNoChargingActId = noChargingActId;
-            }
-        }
-        Activity closestNoChargingActivity = (Activity) planElements.get(closestNoChargingActId);
-        closestNoChargingActivity.setType(closestNoChargingActivity.getType() + CHARGING_IDENTIFIER);
+        // Change by subsequently removing and adding charging activities
+        removeChargingActivity(planElements, chargingActIds);
+        addChargingActivity(planElements, noChargingActIds);
     }
 
     @Override
