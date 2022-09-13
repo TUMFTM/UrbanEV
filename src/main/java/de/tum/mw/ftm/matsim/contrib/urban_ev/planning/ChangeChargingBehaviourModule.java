@@ -268,11 +268,13 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
 
     @Override
     public void handleEvent(ChargingBehaviourScoringEvent event) {
-        double startSoc = event.getStartSoc();
+        //double startSoc = event.getStartSoc();
         double soc = event.getSoc();
-        boolean isLastAct = event.getActivityType().contains("end");
+        //boolean isLastAct = event.getActivityType().contains("end");
+        Person person = this.population.getPersons().get(event.getPersonId());
+        double personRangeAnxiety = person.getAttributes().getAttribute("rangeAnxietyThreshold")!=null ? Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString()) : this.evCfg.getDefaultRangeAnxietyThreshold();
         // Make sure agents with a criticalSOC or with a bad end-soc get replanned for sure
-        if (soc == 0 || (isLastAct && Math.abs(soc - startSoc) > random.nextDouble())) {
+        if (soc<=personRangeAnxiety) {
             // Add all critical agents to the criticalSOC subpopulation such that they get replanned
             population.getPersons().get(event.getPersonId()).getAttributes().putAttribute("subpopulation", "criticalSOC");
         }
