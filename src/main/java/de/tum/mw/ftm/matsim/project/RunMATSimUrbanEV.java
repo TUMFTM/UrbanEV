@@ -15,6 +15,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlansConfigGroup;
+import org.matsim.core.config.groups.StrategyConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.mobsim.qsim.AbstractQSimModule;
@@ -72,10 +73,15 @@ public class RunMATSimUrbanEV {
 
 		if (initIterations > 0) {
 			
+			// Configure initialization
 			Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
 			initConfig.controler().setLastIteration(initIterations);
 			String baseOutputDirectory = initConfig.controler().getOutputDirectory();
-
+			StrategyConfigGroup strategyConfigGroup = (StrategyConfigGroup) initConfig.getModules().get("strategy");
+			
+			// Make sure that innovation is not disabled during initialization
+			strategyConfigGroup.setFractionOfIterationsToDisableInnovation(1.0);
+			
 			// If initialization iterations are needed
 			for(int repetition = 0; repetition <= initIterationRepetitions; repetition++)
 			{
