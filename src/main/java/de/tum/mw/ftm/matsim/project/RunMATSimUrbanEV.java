@@ -38,6 +38,8 @@ public class RunMATSimUrbanEV {
 
 	public static void main(String[] args) throws IOException {
 
+
+		// Read program args
 		String configPath = "";
 		int initIterations = 0;
 		int initIterationRepetitions = 0;
@@ -60,9 +62,11 @@ public class RunMATSimUrbanEV {
 			throw new IOException("Could not start simulation. Config file missing.");
 		}
 
+		// Inform user
 		log.info("Config file path: " + configPath);
 		log.info("Number of iterations to initialize SOC distribution: " + initIterations);
 
+		// Prepare configs
 		ConfigGroup[] configGroups = new ConfigGroup[]{new EvConfigGroup(), new UrbanEVConfigGroup()};
 		Config config = ConfigUtils.loadConfig(configPath, configGroups);
 
@@ -82,15 +86,29 @@ public class RunMATSimUrbanEV {
 				// use new vehicles file for next initialization
 				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
 				PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
+				UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) initConfig.getModules().get("urban_ev");
+				
+				// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
+				urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
+				urbanEVConfigGroup.setGenerateWorkChargersByPercentage(false);
+
+				// use new vehicles file and plans for training
 				evConfigGroup.setVehiclesFile("output/init" + Integer.toString(repetition) + "/output_evehicles.xml");
 				plansConfigGroup.setInputFile("output/init" + Integer.toString(repetition) + "/output_plans.xml.gz");
 			}
 
-			// use new vehicles file for training
-			EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
-			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
+			// use new vehicles file and plans for training
+			EvConfigGroup evConfigGroup = (EvConfigGroup) config.getModules().get("ev");
+			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) config.getModules().get("plans");
+			UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
 			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_evehicles.xml");
 			plansConfigGroup.setInputFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_plans.xml.gz");
+
+			// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
+			urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
+			urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
+
+			// Set output directory
 			config.controler().setOutputDirectory(baseOutputDirectory + "/train");
 		}
 
