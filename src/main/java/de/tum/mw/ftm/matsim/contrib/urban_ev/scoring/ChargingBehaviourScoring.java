@@ -60,17 +60,14 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
             // punish walking distance
             double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
-            if (activityType.contains(CHARGING_IDENTIFIER)&walkingDistance>0) {
-                if(!activityType.contains("home") && !activityType.contains("work")){
-                    // Punish charging with walking distance > 0 only if it is not performed at work or home
-
+            if (activityType.contains(CHARGING_IDENTIFIER) && walkingDistance>0) {
+                    
                     // inverted utility based on Geurs, van Wee 2004 Equation (1)
                     double beta = 0.005;
                     double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(-beta * walkingDistance));
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.WALKING_DISTANCE, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.WALKING_DISTANCE, person.getId());
-                    score += delta_score;
-                }                
+                    score += delta_score;                
             }
             
             // reward charging at home
