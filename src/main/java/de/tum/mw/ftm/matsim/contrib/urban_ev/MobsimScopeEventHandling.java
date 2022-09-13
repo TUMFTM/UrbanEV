@@ -252,28 +252,32 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 				}
 			}
 		}
-		String chargerType = ChargerSpecification.DEFAULT_CHARGER_TYPE;
-		int plugCount = ChargerSpecification.DEFAULT_PLUG_COUNT;
-		List<Id<ElectricVehicle>> allowedEvIds = new ArrayList();
-		allowedEvIds.add(Id.create(ownerId, ElectricVehicle.class));
 
-		ChargerSpecification chargerSpecification = ImmutableChargerSpecification.newBuilder()
-				.id(Id.create(chargerId, Charger.class))
-				.coord(new Coord(actCoord.getX(), actCoord.getY()))
-				.chargerType(chargerType)
-				.plugPower(EvUnits.kW_to_W(power))
-				.plugCount(plugCount)
-				.allowedVehicles(allowedEvIds)
-				.build();
+		// Add a charger only if an activity with the corresponding activityType exists within the person's plans
+		if (actCoord.getX()!=0&&actCoord.getY()!=0){
+			String chargerType = ChargerSpecification.DEFAULT_CHARGER_TYPE;
+			int plugCount = ChargerSpecification.DEFAULT_PLUG_COUNT;
+			List<Id<ElectricVehicle>> allowedEvIds = new ArrayList();
+			allowedEvIds.add(Id.create(ownerId, ElectricVehicle.class));
 
-		chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
+			ChargerSpecification chargerSpecification = ImmutableChargerSpecification.newBuilder()
+					.id(Id.create(chargerId, Charger.class))
+					.coord(new Coord(actCoord.getX(), actCoord.getY()))
+					.chargerType(chargerType)
+					.plugPower(EvUnits.kW_to_W(power))
+					.plugCount(plugCount)
+					.allowedVehicles(allowedEvIds)
+					.build();
 
-		// Also add the corresponding person attribute in case it was not set by the config
-		if(activityType.contains("home")){
-			person.getAttributes().putAttribute("homeChargerPower", String.valueOf(power));
-		}
-		else{
-			person.getAttributes().putAttribute("workChargerPower", String.valueOf(power));
+			chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
+
+			// Also add the corresponding person attribute in case it was not set by the config
+			if(activityType.contains("home")){
+				person.getAttributes().putAttribute("homeChargerPower", String.valueOf(power));
+			}
+			else{
+				person.getAttributes().putAttribute("workChargerPower", String.valueOf(power));
+			}
 		}
 			
 	}
