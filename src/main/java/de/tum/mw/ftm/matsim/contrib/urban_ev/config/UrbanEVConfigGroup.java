@@ -63,6 +63,9 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String DEFAULT_WORK_CHARGER_POWER = "defaultWorkChargerPower";
     static final String DEFAULT_WORK_CHARGER_POWER_EXP = "The power of work chargers if generateWorkChargersByPercentage is set to true [kW].";
 
+    public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
+    static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
+
 
     // Charger parameters
     private boolean generateHomeChargersByPercentage = false;
@@ -108,6 +111,9 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private int parkingSearchRadius = 500;
 
+    @Positive
+    private double opportunityChargingShare = 0.02;
+
     // Replanning parameters
 
     @Positive
@@ -144,6 +150,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(WORK_CHARGER_PERCENTAGE, WORK_CHARGER_PERCENTAGE_EXP);
         map.put(DEFAULT_HOME_CHARGER_POWER, DEFAULT_HOME_CHARGER_POWER_EXP);
         map.put(DEFAULT_WORK_CHARGER_POWER, DEFAULT_WORK_CHARGER_POWER_EXP);
+        map.put(OPPORTUNITY_CHARGING_SHARE, OPPORTUNITY_CHARGING_SHARE_EXP);
         return map;
     }
 
@@ -299,6 +306,16 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(DEFAULT_WORK_CHARGER_POWER)
     public void setDefaultWorkChargerPower(double defaultWorkChargerPower) {
         this.defaultWorkChargerPower = defaultWorkChargerPower;
+    }
+
+    @StringGetter(OPPORTUNITY_CHARGING_SHARE)
+    public double getOpportunityChargingShare() {
+        return opportunityChargingShare;
+    }
+
+    @StringSetter(OPPORTUNITY_CHARGING_SHARE)
+    public void setOpportunityChargingShare(double opportunityChargingShare) {
+        this.opportunityChargingShare = opportunityChargingShare;
     }
 
 }

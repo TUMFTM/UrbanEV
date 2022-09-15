@@ -53,6 +53,8 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
         double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
         double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
         String subpopulation = personAttributes.getAttribute("subpopulation").toString();
+        String opportunityCharging_str = personAttributes.getAttribute("opportunityCharging").toString();
+        Boolean opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
 
         // derived person characteristics
         Boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
@@ -87,7 +89,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                     } else if (actType.endsWith(CHARGING_FAILED_IDENTIFIER)) {
                         // remove and possibly change activity or time
                         failedChargingActIds.add(i);
-                        act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, ""));
+                        act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, CHARGING_IDENTIFIER));
                     } else {
                         noChargingActIds.add(i);
                     }
@@ -122,8 +124,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
             Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
             Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
 
-            // Todo: Consider to add some randomness for the critical persons as well (e.g. switch charging activities instead of adding)
             if(personCriticalSOC){
+
+                // If the person has a critical soc, add a charging activity
                 if(personHasHomeCharger & remainingHomeChargingOpportunities){
                     // critical soc and home charger
                     addChargingActivity(planElements, homeActsWithoutCharging);
@@ -153,20 +156,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                 }
             }
             else{
-                // non crictical soc
+                // non-critical soc: add, change, or remove charging activities
+                // constraint: always make sure that people who are flagged as taking part in opportunity charging will continue to do so
 
                 int randomAction = 0;
                 
                 // Handling of failed charging activities: This is an extra action that does not count for the max number of plan changes
-                if (failedChargingActIds.size()>0)
+                if (failedChargingActIds.size()>0 && random.nextDouble()<timeAdjustmentProbability)
                 {
-                    if (random.nextDouble() < timeAdjustmentProbability) {
-                        // With some probability try changing start time of failed charging activity (end time of previous activity)
-                        changeChargingActivityTime(planElements, failedChargingActIds);
-                    } else {
-                        // with probability 1-timeAdjustmentProbability just remove a failed charging activity, because it is not needed anyways
-                        removeChargingActivity(planElements, failedChargingActIds);
-                    }
+                    // With some probability try changing start time of failed charging activity (end time of previous activity)
+                    // Charging activities that continue to fail will be removed by replanning eventually (no benefit to score)
+                    changeChargingActivityTime(planElements, failedChargingActIds);
                 }
 
                 if(personHasPrivateCharger)
@@ -184,9 +184,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                         // 6: add other charging
                         // 7: remove home charging
                         // 8: remove work charging
-                        // 9: remove other charging
-
-                        randomAction = random.nextInt(10);
+                        // 9: remove other charging (if possible)
+                        // 10: remove other, add other charging (charge at some other non-home/non-work activity)
+                        
+                        randomAction = random.nextInt(11);
 
                         switch(randomAction) {
                             case 0:
@@ -249,10 +250,19 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                                 }
                                 break;
                             case 9: 
-                                if(otherActsWithCharging.size()>0)
+                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
                                 {
-                                    // Remove other
+                                    // Remove other charging activity only if
+                                    // A: the person is not flagged for opportunity charging and has other charging activities
+                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
                                     removeChargingActivity(planElements, otherActsWithCharging);
+                                }
+                                break;
+                            case 10: 
+                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
+                                {
+                                    // Remove other, add other
+                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
                                 }
                                 break;
                         }
@@ -268,9 +278,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                         // 3: add other charging
                         // 4: remove home charging
                         // 5: remove work charging
-                        // 6: remove other charging
+                        // 6: remove other charging (if possible)
+                        // 7: remove other, add other charging (charge at some other non-home/non-work activity)
 
-                        randomAction = random.nextInt(7);
+                        randomAction = random.nextInt(8);
                         
                         switch(randomAction) {
                            
@@ -316,10 +327,19 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                                 }
                                 break;
                             case 6: 
-                                if(otherActsWithCharging.size()>0)
+                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
                                 {
-                                    // Remove other
+                                    // Remove other charging activity only if
+                                    // A: the person is not flagged for opportunity charging and has other charging activities
+                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
                                     removeChargingActivity(planElements, otherActsWithCharging);
+                                }
+                                break;
+                            case 7: 
+                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
+                                {
+                                    // Remove other, add other
+                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
                                 }
                                 break;
                         }
@@ -334,9 +354,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                         // 3: add other charging
                         // 4: remove home charging
                         // 5: remove work charging
-                        // 6: remove other charging
+                        // 6: remove other charging (if possible)
+                        // 7: remove other, add other charging (charge at some other non-home/non-work activity)
                         
-                        randomAction = random.nextInt(7);
+                        randomAction = random.nextInt(8);
 
                         switch(randomAction) {
                             
@@ -382,10 +403,19 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                                 }
                                 break;
                             case 6: 
-                                if(otherActsWithCharging.size()>0)
+                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
                                 {
-                                    // Remove other
+                                    // Remove other charging activity only if
+                                    // A: the person is not flagged for opportunity charging and has other charging activities
+                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
                                     removeChargingActivity(planElements, otherActsWithCharging);
+                                }
+                                break;
+                            case 7: 
+                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
+                                {
+                                    // Remove other, add other
+                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
                                 }
                                 break;
                         }

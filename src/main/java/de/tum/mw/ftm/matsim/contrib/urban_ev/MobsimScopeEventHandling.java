@@ -36,6 +36,7 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
@@ -55,6 +56,7 @@ import org.matsim.core.utils.misc.Time;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -75,6 +77,7 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	private final EventsManager eventsManager;
 	private Random random = new Random();
 	private StrategyManager strategyManager;
+	private static final String CHARGING_IDENTIFIER = " charging";
 
 	private int iterationNumber = 0;
 	private int lastIteration = 0;
@@ -120,6 +123,8 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		lastIteration = config.controler().getLastIteration();
 		endTime = config.qsim().getEndTime().seconds();
 		strategyManager = matsimServices.getStrategyManager();
+		UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
+		double opportunityChargingShare = urbanEVConfigGroup.getOpportunityChargingShare();
 
         population.getPersons().forEach((personId, person) -> {
 
@@ -129,8 +134,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			}
 
 			// add work and home chargers
-			// Todo: Generalize this for any kind of private charging infrastructure
-
 			double homeChargerPower;
 			double workChargerPower;
 
@@ -163,7 +166,10 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			// Add home and work chargers if necessary
 			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
 			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
-
+			
+			// Handle opportunity charging characteristics
+			determineOpportunityChargingStatus(person, homeChargerPower, workChargerPower, opportunityChargingShare);
+			
         });
 
         // Write final chargers to file
@@ -281,4 +287,73 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		}
 			
 	}
+
+	private void determineOpportunityChargingStatus(Person person, double homeChargerPower, double workChargerPower, double opportunityChargingShare){
+		
+		// Remove all existing characteristics to not interfere with initialization runs 
+		person.getAttributes().putAttribute("opportunityCharging", "false");
+
+		// If the person owns at least one private charger
+		if(homeChargerPower!=0.0||workChargerPower!=0.0)
+		{
+			boolean assignOpportunityCharging = random.nextDouble()<opportunityChargingShare;
+			// If this person statistically is a person who engages in opportunity charging despite owning a private charger
+			if(assignOpportunityCharging){
+				
+				person.getAttributes().putAttribute("opportunityCharging", "true");
+
+				// Make sure that at least one opportunity charging instance exists in all plans of the person
+				for(Plan plan:person.getPlans()){
+					
+					boolean planContainsOtherChargingAct = false;
+					ArrayList<Activity> nonHomeNonWorkActs = new ArrayList<>();
+
+					for(PlanElement pe:plan.getPlanElements()){
+
+						if (pe instanceof Activity) {
+
+							Activity act = (Activity) pe;
+							String actType = act.getType();
+							
+							if(!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))
+							{
+								// store all activities that are not at home or work to later add a non-home/non-work charging activity if none is present in the plan
+								nonHomeNonWorkActs.add(act);
+
+								if(actType.contains(CHARGING_IDENTIFIER)){
+									// this plan contains a non-home/non-work charging activity
+									planContainsOtherChargingAct=true;
+									break;
+								}
+								
+							}
+							
+						}
+
+					}
+
+					if(!planContainsOtherChargingAct){
+						// add a charging activity away from home/work to the plan if possible. Otherwise make sure the person is not marked to participate in opportunity charging
+						int n_nonHomeNonWork = nonHomeNonWorkActs.size();
+						if(n_nonHomeNonWork>0)
+						{
+							int randIdx = n_nonHomeNonWork-1>0 ? random.nextInt(n_nonHomeNonWork-1) : 0;
+							Activity randomNonHomeNonWorkActivity = nonHomeNonWorkActs.get(randIdx);
+							randomNonHomeNonWorkActivity.setType(randomNonHomeNonWorkActivity.getType() + CHARGING_IDENTIFIER);
+						}
+						else
+						{
+							// The agent can not take part in opportunity charging, because it only dwells at home and work
+							person.getAttributes().putAttribute("opportunityCharging", "false");
+
+							// once a single plan of a person does not allow for opportunity charging, abort
+							break;
+						}
+					}
+
+				}					
+			}
+		}
+	}
+
 }
