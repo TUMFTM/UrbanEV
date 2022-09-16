@@ -99,7 +99,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
                     if(actType.contains("home")){
                         homeActIds.add(i);
                     }
-                    else if(actType.contains("work")){
+                    else if(actType.contains("work")&&!actType.contains("work_related")){
                         workActIds.add(i);
                     }
                     else{

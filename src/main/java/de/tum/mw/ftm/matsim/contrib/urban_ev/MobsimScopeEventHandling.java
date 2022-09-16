@@ -315,7 +315,7 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 							Activity act = (Activity) pe;
 							String actType = act.getType();
 							
-							if(!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))
+							if((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
 							{
 								// store all activities that are not at home or work to later add a non-home/non-work charging activity if none is present in the plan
 								nonHomeNonWorkActs.add(act);
