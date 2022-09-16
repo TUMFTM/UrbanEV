@@ -3,7 +3,9 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.scoring;
 import com.google.inject.Inject;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
 import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.scoring.SumScoringFunction;
 
 public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEventScoring {
@@ -13,10 +15,12 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         EMPTY_BATTERY,
         WALKING_DISTANCE,
         HOME_CHARGING,
-        ENERGY_BALANCE
+        ENERGY_BALANCE, 
+        OPPORTUNITY_CHARGING
     }
 
     private double score;
+    private boolean opportunityCharging;
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String LAST_ACT_IDENTIFIER = " end";
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
@@ -28,6 +32,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person) {
         this.params = params;
         this.person = person;
+        String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
+        this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
     }
 
     @Override
@@ -99,6 +105,33 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
                 chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.ENERGY_BALANCE, person.getId());
             }
+
+            // punish if opportunity charging person fails to opportunity charge during the simulation
+            if (activityType.contains(LAST_ACT_IDENTIFIER)){
+                
+                String opportunityChargingPerson_str = person.getAttributes().getAttribute("opportunityCharging") != null ? person.getAttributes().getAttribute("opportunityCharging").toString() : "false";
+                boolean opportunityChargingPerson = opportunityChargingPerson_str.equals("true") ? true : false;
+                double delta_score = 0;
+
+                if(!opportunityChargingPerson){
+                    delta_score=0;
+                }
+                else{
+                    if(!successfulOpportunityCharging(person)){
+                        // agent failed to opportunity charge even though it should have
+                        delta_score = params.failedOpportunityChargingUtility;
+                    }
+                    else{
+                        // person successfully performed opportunity charging
+                        delta_score=0;
+                    }
+                }
+                chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.OPPORTUNITY_CHARGING, delta_score);
+                chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.OPPORTUNITY_CHARGING, person.getId());
+                score += delta_score;
+
+            }
+
         }
     }
 
@@ -109,5 +142,38 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         return score;
     }
 
+    private boolean successfulOpportunityCharging(Person person){
+        
+        boolean planContainsSuccessfulOpportunityCharging = false;
+
+        for(PlanElement pe:person.getSelectedPlan().getPlanElements()){
+
+            if (pe instanceof Activity) {
+
+                Activity act = (Activity) pe;
+                String actType = act.getType();
+                
+                if(
+                    ((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
+                    &&
+                    actType.contains(CHARGING_IDENTIFIER)
+                    &&
+                    !actType.contains("failed")
+                    )
+                {
+                    // plan contains a successful opportunity charging activity in case there is a charging activity that
+                    // is non-home, non-work and did not fail
+                    planContainsSuccessfulOpportunityCharging = true;
+                    break;
+                    
+                }
+                
+            }
+
+        }
+
+        return planContainsSuccessfulOpportunityCharging;
+
+    }
 
 }

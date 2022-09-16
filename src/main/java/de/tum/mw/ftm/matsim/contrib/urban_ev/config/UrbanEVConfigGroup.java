@@ -66,6 +66,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
     static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
 
+    public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
+    static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
 
     // Charger parameters
     private boolean generateHomeChargersByPercentage = false;
@@ -100,6 +102,9 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @NotNull
     private double socDifferenceUtility = -10;
+
+    @NotNull
+    private double failedOpportunityChargingUtility = -10;
 
     @Positive
     private double defaultRangeAnxietyThreshold = 0.2;
@@ -151,6 +156,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(DEFAULT_HOME_CHARGER_POWER, DEFAULT_HOME_CHARGER_POWER_EXP);
         map.put(DEFAULT_WORK_CHARGER_POWER, DEFAULT_WORK_CHARGER_POWER_EXP);
         map.put(OPPORTUNITY_CHARGING_SHARE, OPPORTUNITY_CHARGING_SHARE_EXP);
+        map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
         return map;
     }
 
@@ -316,6 +322,16 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(OPPORTUNITY_CHARGING_SHARE)
     public void setOpportunityChargingShare(double opportunityChargingShare) {
         this.opportunityChargingShare = opportunityChargingShare;
+    }
+
+    @StringGetter(FAILED_OPPORTUNITY_CHARGING_UTILITY)
+    public double getFailedOpportunityChargingUtility() {
+        return failedOpportunityChargingUtility;
+    }
+
+    @StringSetter(FAILED_OPPORTUNITY_CHARGING_UTILITY)
+    public void setFailedOpportunityChargingUtility(double failedOpportunityChargingUtility) {
+        this.failedOpportunityChargingUtility = failedOpportunityChargingUtility;
     }
 
 }

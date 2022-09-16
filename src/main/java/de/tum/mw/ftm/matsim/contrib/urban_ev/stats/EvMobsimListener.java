@@ -207,7 +207,9 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						"meanHomeCharging",
 						"sumEnergyBalance",
 						"energyBalanceScoringPersons",
-						"meanEnergyBalance"
+						"meanEnergyBalance",
+						"opportunityChargingScoringPersons",
+						"meanOpportunityChargingScore"
 				));
 			} else {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.APPEND), CSVFormat.DEFAULT.withDelimiter(';'));
@@ -230,7 +232,9 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 							// mean HOME_CHARGING
 					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// sum ENERGY_BALANCE
 					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 	// number of persons scoring ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)) 							// mean ENERGY_BALANCE
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// mean ENERGY_BALANCE
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 	// number of persons scoring OPPORTUNITY_CHARGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)) 							// mean OPPORTUNITY_CHARGING
 			);
 
 
