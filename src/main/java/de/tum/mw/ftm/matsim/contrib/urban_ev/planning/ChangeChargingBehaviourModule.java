@@ -115,9 +115,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
             ArrayList<Integer> workActsWithCharging = new ArrayList<Integer>(allChargingActIds.stream().filter(element -> workActIds.contains(element)).collect(Collectors.toList()));
             ArrayList<Integer> otherActsWithCharging = new ArrayList<Integer>(allChargingActIds.stream().filter(element -> otherActIds.contains(element)).collect(Collectors.toList()));
 
-            ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !homeActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !workActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> !otherActIds.contains(element)).collect(Collectors.toList()));
+            ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> homeActIds.contains(element)).collect(Collectors.toList()));
+            ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> workActIds.contains(element)).collect(Collectors.toList()));
+            ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> otherActIds.contains(element)).collect(Collectors.toList()));
 
             // charging options
             Boolean remainingHomeChargingOpportunities = homeActsWithoutCharging.size() > 0 ? true : false;
