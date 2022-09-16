@@ -337,8 +337,7 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 						int n_nonHomeNonWork = nonHomeNonWorkActs.size();
 						if(n_nonHomeNonWork>0)
 						{
-							int randIdx = n_nonHomeNonWork-1>0 ? random.nextInt(n_nonHomeNonWork-1) : 0;
-							Activity randomNonHomeNonWorkActivity = nonHomeNonWorkActs.get(randIdx);
+							Activity randomNonHomeNonWorkActivity = nonHomeNonWorkActs.get(random.nextInt(n_nonHomeNonWork));
 							randomNonHomeNonWorkActivity.setType(randomNonHomeNonWorkActivity.getType() + CHARGING_IDENTIFIER);
 						}
 						else
