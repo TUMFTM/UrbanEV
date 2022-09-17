@@ -67,7 +67,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             // punish walking distance if
             // a person charges and has to walk (i.e. does not use a private charger) and is not a person that charges publicly at home due to not having a private charger at home
             double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
-            if (activityType.contains(CHARGING_IDENTIFIER) && walkingDistance>0 && !(!hasChargerAtHome && activityType.contains("home"))) {
+            if (activityType.contains(CHARGING_IDENTIFIER) && walkingDistance>0) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
                     
                     // inverted utility based on Geurs, van Wee 2004 Equation (1)
                     double beta = 0.005;
