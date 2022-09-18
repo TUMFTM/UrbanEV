@@ -88,11 +88,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
             // punish difference between end soc and start soc to get realistic soc distribution
             if (activityType.contains(LAST_ACT_IDENTIFIER)) {
-                if (activityType.contains(CHARGING_IDENTIFIER)) {
-                    // Todo: Check whether this can be replaced by an estimation regarding how high the soc would have been if charging finished.
-                    // This is a workaround
-                    soc = 1;
-                }
+                
                 // Calculate SOC difference
                 Double soc_diff =  soc - chargingBehaviourScoringEvent.getStartSoc();
                 if(soc_diff<=0){
@@ -161,10 +157,12 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                     actType.contains(CHARGING_IDENTIFIER)
                     &&
                     !actType.contains("failed")
+                    &&
+                    !actType.contains(LAST_ACT_IDENTIFIER)
                     )
                 {
                     // plan contains a successful opportunity charging activity in case there is a charging activity that
-                    // is non-home, non-work and did not fail
+                    // is non-home, non-work, did not fail and is not the last activity
                     planContainsSuccessfulOpportunityCharging = true;
                     break;
                     

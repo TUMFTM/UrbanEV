@@ -42,6 +42,7 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.contrib.util.CSVReaders;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -61,7 +62,9 @@ import javax.inject.Singleton;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,6 +132,61 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		double opportunityChargingShare = urbanEVConfigGroup.getOpportunityChargingShare();
 
         population.getPersons().forEach((personId, person) -> {
+
+			// Make sure all activities end shortly before the simulation ends
+			for(Plan plan: person.getPlans()){
+				ArrayList<Activity> activities = getActivities(plan);
+				if(activities.size()!=0)
+				{
+					Activity lastActinPlanEndingAfterSim = null;
+					List<Integer> delActivitiesIdx = new ArrayList<Integer>();
+					// Find the first activity that ends after the end of the simulation if there is any
+					for(int i = 0; i<plan.getPlanElements().size(); i++)
+					{
+						PlanElement pe = plan.getPlanElements().get(i);
+						if(pe instanceof Activity)
+						{
+							Activity act = (Activity) pe;
+							if(act.getEndTime().seconds()>endTime && Objects.isNull(lastActinPlanEndingAfterSim))
+							{
+								lastActinPlanEndingAfterSim = act;
+							}
+							else if(act.getEndTime().seconds()>endTime)
+							{
+								// There are even more activities that end after the simulation time, remove those
+								if(act.getEndTime().seconds()>lastActinPlanEndingAfterSim.getEndTime().seconds())
+								{
+									delActivitiesIdx.add(i);
+								}
+								
+							}
+						}
+
+					}
+					Collections.sort(delActivitiesIdx, Collections.reverseOrder());  
+					// Delete all activities that end even later than the expected last activity
+					for(int i = 0; i<delActivitiesIdx.size(); i++)
+					{
+						PopulationUtils.removeActivity(plan, delActivitiesIdx.get(i));
+					}
+
+					if(!Objects.isNull(lastActinPlanEndingAfterSim))
+					{
+						// If there is at least one activity ending after the simulation time 
+						// Make it end right before the end of the simulation and introduce an aritifical activity in its place 
+						// that serves to trigger unplugging events for all chargers at simulation end time
+						lastActinPlanEndingAfterSim.setEndTime(endTime-1);
+						Activity newLastActinPlan = PopulationUtils.createActivityFromCoord(lastActinPlanEndingAfterSim.getType(),lastActinPlanEndingAfterSim.getCoord());
+						newLastActinPlan.setEndTime(endTime);
+						if(!newLastActinPlan.getType().contains("end"))
+						{
+							newLastActinPlan.setType(newLastActinPlan.getType().replace(" charging", "").concat(" end"));
+						}
+						lastActinPlanEndingAfterSim.setType(lastActinPlanEndingAfterSim.getType().replace(" end", ""));
+						plan.addActivity(newLastActinPlan);
+					}
+				}
+			}
 
 			// add default range anxiety threshold to person attributes if none given
 			if (person.getAttributes().getAttribute("rangeAnxietyThreshold") == null) {
@@ -445,6 +503,22 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			}
 
 		}
+	}
+
+	private ArrayList<Activity> getActivities(Plan plan){
+
+		ArrayList<Activity> activities = new ArrayList<>();
+
+		for(PlanElement pe:plan.getPlanElements()){
+
+			if (pe instanceof Activity) {
+
+				activities.add((Activity) pe);
+				
+			}
+		
+		}
+		return activities;
 	}
 
 }
