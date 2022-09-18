@@ -145,13 +145,9 @@ public class VehicleChargingHandler
 	public void handleEvent(ActivityEndEvent event) {
 		if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
 			Id<Vehicle> vehicleId = lastVehicleUsed.get(event.getPersonId());
-			if (vehicleId != null) {
-				Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
-				Id<Charger> chargerId = vehiclesAtChargers.remove(evId);
-				if (chargerId != null) {
-					Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-					charger.getLogic().removeVehicle(electricFleet.getElectricVehicles().get(evId), event.getTime());
-				}
+			if(vehiclesAtChargers.containsKey(vehicleId))
+			{
+				unplugVehicle(vehicleId, event.getTime());
 			}
 		}
 	}
@@ -238,4 +234,17 @@ public class VehicleChargingHandler
 			return null;
 		}
 	}
+
+	private void unplugVehicle(Id<Vehicle> vehicleId, double time)
+	{
+		if (vehicleId != null) {
+			Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
+			Id<Charger> chargerId = vehiclesAtChargers.remove(evId);
+			if (chargerId != null) {
+				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
+				charger.getLogic().removeVehicle(electricFleet.getElectricVehicles().get(evId), time);
+			}
+		}
+	}		
+
 }
