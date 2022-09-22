@@ -10,10 +10,10 @@ import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ChangeChargingBehaviourModule implements PlanStrategyModule, ChargingBehaviourScoringEventHandler {
 
@@ -25,16 +25,27 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
     private Population population;
     private UrbanEVConfigGroup evCfg;
     private int maxNumberSimultaneousPlanChanges;
-    private Double timeAdjustmentProbability;
-    private int maxTimeFlexibility;
+
+    private enum ChargingStrategyChange {
+        REMOVEWORK_ADDHOME,
+        REMOVEHOME_ADDWORK,
+        REMOVEWORK_ADDWORK,
+        REMOVEHOME_ADDHOME,
+        ADDHOME,
+        ADDWORK,
+        ADDOTHER,
+        REMOVEHOME,
+        REMOVEWORK,
+        REMOVEOTHER,
+        REMOVEOTHER_ADDOTHER
+    }
+      
 
     ChangeChargingBehaviourModule(Scenario scenario) {
         this.scenario = scenario;
         this.population = this.scenario.getPopulation();
         this.evCfg = (UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev");
         this.maxNumberSimultaneousPlanChanges = evCfg.getMaxNumberSimultaneousPlanChanges();
-        this.timeAdjustmentProbability = evCfg.getTimeAdjustmentProbability();
-        this.maxTimeFlexibility = evCfg.getMaxTimeFlexibility();
     }
 
     @Override
@@ -60,389 +71,188 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
         Boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
         Boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
         Boolean personHasPrivateCharger = personHasHomeCharger || personHasWorkCharger;
-        Boolean personCriticalSOC = subpopulation.equals("criticalSOC");
+        Boolean personCriticalSOC = subpopulation.equals("criticalSOC");      
 
-        // retrieve person charging history
-        List<PlanElement> planElements = plan.getPlanElements();
-        int planSize = planElements.size();
+        // person plan analysis
+        HashMap<Integer, Activity> acts = getActivities(plan);
+        HashMap<Integer, Activity> nonStartOrEndActs = getActsFromHashMapNotEqualsType(getActsFromHashMapNotContainsType(acts, "end"),"");
+        HashMap<Integer, Activity> homeActs = getActsFromHashMapContainsType(nonStartOrEndActs, "home");
+        HashMap<Integer, Activity> workOrWorkRelatedActs = getActsFromHashMapContainsType(nonStartOrEndActs, "work");
+        HashMap<Integer, Activity> workActs = getActsFromHashMapNotContainsType(workOrWorkRelatedActs, "work_related");
+        HashMap<Integer, Activity> otherActs = new HashMap<>(nonStartOrEndActs.entrySet().stream().filter(actEntry -> !homeActs.containsKey(actEntry.getKey())&&!workActs.containsKey(actEntry.getKey())).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
 
         // Apply plan changes
         for (int c = 0; c < numberOfChanges; c++) {
 
-            // Todo: probably switch to sets, prevent total reevaluation
-            ArrayList<Integer> successfulChargingActIds = new ArrayList<>();
-            ArrayList<Integer> failedChargingActIds = new ArrayList<>();
-            ArrayList<Integer> noChargingActIds = new ArrayList<>();
-            ArrayList<Integer> workActIds = new ArrayList<>();
-            ArrayList<Integer> homeActIds = new ArrayList<>();
-            ArrayList<Integer> otherActIds = new ArrayList<>();
+            // first, analyze current charging behavior
+            HashMap<Integer, Activity> allChargingActs = getActsFromHashMapContainsType(nonStartOrEndActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> noChargingActs = getActsFromHashMapNotContainsType(nonStartOrEndActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> failedChargingActs = getActsFromHashMapContainsType(allChargingActs, CHARGING_FAILED_IDENTIFIER);
+            HashMap<Integer, Activity> successfulChargingActs = getActsFromHashMapNotContainsType(allChargingActs, CHARGING_FAILED_IDENTIFIER);
 
-            for (int i = 1; i < planSize; i++) {
-                PlanElement pe = planElements.get(i);
-                
-                // identify the charging status of each plan element
-                if (pe instanceof Activity) {
-                    Activity act = (Activity) pe;
-                    String actType = act.getType();
-                    if (actType.endsWith(CHARGING_IDENTIFIER)) {
-                        successfulChargingActIds.add(i);
-                    } else if (actType.endsWith(CHARGING_FAILED_IDENTIFIER)) {
-                        // remove and possibly change activity or time
-                        failedChargingActIds.add(i);
-                        act.setType(actType.replace(CHARGING_FAILED_IDENTIFIER, CHARGING_IDENTIFIER));
-                    } else {
-                        noChargingActIds.add(i);
-                    }
-                
-                    // identify home, work, and other plan elements
-                    
-                    if(actType.contains("home")){
-                        homeActIds.add(i);
-                    }
-                    else if(actType.contains("work")&&!actType.contains("work_related")){
-                        workActIds.add(i);
-                    }
-                    else{
-                        otherActIds.add(i);
-                    }
-                }
-            }
+            HashMap<Integer, Activity> homeActsWithCharging = getActsFromHashMapContainsType(homeActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> workActsWithCharging = getActsFromHashMapContainsType(workActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> otherActsWithCharging = getActsFromHashMapContainsType(otherActs, CHARGING_IDENTIFIER);
 
-            // derived activity characteristics
-            ArrayList<Integer> allChargingActIds = new ArrayList<Integer>(Stream.of(successfulChargingActIds, failedChargingActIds).flatMap(x -> x.stream()).collect(Collectors.toList()));
+            HashMap<Integer, Activity> homeActsWithoutCharging = getActsFromHashMapNotContainsType(homeActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> workActsWithoutCharging = getActsFromHashMapNotContainsType(workActs, CHARGING_IDENTIFIER);
+            HashMap<Integer, Activity> otherActsWithoutCharging = getActsFromHashMapNotContainsType(otherActs, CHARGING_IDENTIFIER);
 
-            ArrayList<Integer> homeActsWithCharging = new ArrayList<Integer>(allChargingActIds.stream().filter(element -> homeActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> workActsWithCharging = new ArrayList<Integer>(allChargingActIds.stream().filter(element -> workActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> otherActsWithCharging = new ArrayList<Integer>(allChargingActIds.stream().filter(element -> otherActIds.contains(element)).collect(Collectors.toList()));
-
-            ArrayList<Integer> homeActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> homeActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> workActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> workActIds.contains(element)).collect(Collectors.toList()));
-            ArrayList<Integer> otherActsWithoutCharging = new ArrayList<Integer>(noChargingActIds.stream().filter(element -> otherActIds.contains(element)).collect(Collectors.toList()));
-
-            // charging options
-            Boolean remainingHomeChargingOpportunities = homeActsWithoutCharging.size() > 0 ? true : false;
-            Boolean remainingWorkChargingOpportunities = workActsWithoutCharging.size() > 0 ? true : false;
-            Boolean remainingOtherChargingOpportunities = otherActsWithoutCharging.size() > 0 ? true : false;
+            // Remove failed charging activities
+            failedChargingActs.forEach((idx, act) -> {act.setType(act.getType().replace(" failed", ""));});
 
             if(personCriticalSOC){
 
                 // If the person has a critical soc, add a charging activity
-                if(personHasHomeCharger & remainingHomeChargingOpportunities){
+                if(personHasHomeCharger & !homeActsWithoutCharging.isEmpty()){
                     // critical soc and home charger
-                    addChargingActivity(planElements, homeActsWithoutCharging);
+                    addChargingActivity(homeActsWithoutCharging);
                 }
-                else if(personHasWorkCharger & remainingWorkChargingOpportunities){
+                else if(personHasWorkCharger & !workActsWithoutCharging.isEmpty()){
                     // critical soc and work, but no home charger 
-                    addChargingActivity(planElements, workActsWithoutCharging);
+                    addChargingActivity(workActsWithoutCharging);
                 }
-                else if(remainingHomeChargingOpportunities){
+                else if(!homeActsWithoutCharging.isEmpty()){
                     // if the person has to charge publicly, charging close to home is still preferred
-                    addChargingActivity(planElements, homeActsWithoutCharging);
+                    addChargingActivity(homeActsWithoutCharging);
                 }
-                else if(remainingWorkChargingOpportunities){
+                else if(!workActsWithoutCharging.isEmpty()){
                     // if the person has to charge publicly but can not charge close to home, charging close to work is preferred
-                    addChargingActivity(planElements, workActsWithoutCharging);
+                    addChargingActivity(workActsWithoutCharging);
                 }
-                else if(remainingOtherChargingOpportunities){
+                else if(!otherActsWithoutCharging.isEmpty()){
                     // critical soc, but person can not charge close to home or work
-                    addChargingActivity(planElements, otherActsWithoutCharging); // Add charging activity to any activity without charging
-                }
-                else if(failedChargingActIds.size()>0){
-                    // critical but already used up all charging opportunities
-                    changeChargingActivityTime(planElements, failedChargingActIds);
+                    addChargingActivity(otherActsWithoutCharging); // Add charging activity to any activity without charging
                 }
                 else{
                     ; // Todo: Handle these hopeless cases
                 }
             }
             else{
+
                 // non-critical soc: add, change, or remove charging activities
                 // constraint: always make sure that people who are flagged as taking part in opportunity charging will continue to do so
-
-                int randomAction = 0;
-                
-                // Handling of failed charging activities: This is an extra action that does not count for the max number of plan changes
-                if (failedChargingActIds.size()>0 && random.nextDouble()<timeAdjustmentProbability)
-                {
-                    // With some probability try changing start time of failed charging activity (end time of previous activity)
-                    // Charging activities that continue to fail will be removed by replanning eventually (no benefit to score)
-                    changeChargingActivityTime(planElements, failedChargingActIds);
-                }
+                ArrayList<ChargingStrategyChange> viableChanges = new ArrayList<ChargingStrategyChange>();
 
                 if(personHasPrivateCharger)
                 {
+
+                    // Person has both, home and work charger
+                    // All options (case dependend): 
+                    // REMOVEWORK_ADDHOME: remove work, add home charging (charge at home instead of at work)
+                    // REMOVEHOME_ADDWORK: remove home, add work charging (charge at work instead of at home)
+                    // REMOVEWORK_ADDWORK: remove work, add work charging (charge some other day at work)
+                    // REMOVEHOME_ADDHOME: remove home, add home charging (charge some other day at home)
+                    // ADDHOME: add home charging
+                    // ADDWORK: add work charging
+                    // ADDOTHER: add other charging
+                    // REMOVEHOME: remove home charging
+                    // REMOVEWORK: remove work charging
+                    // REMOVEOTHER: remove other charging (if possible)
+                    // REMOVEOTHER_ADDOTHER: remove other, add other charging (charge at some other non-home/non-work activity)
+
+                    // These are the generally available options for people who own a private charger
+                    if(!homeActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.ADDHOME);
+                    if(!workActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.ADDWORK);
+                    if(!otherActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.ADDOTHER);
+
+                    if(!homeActsWithCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEHOME);
+                    if(!workActsWithCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK);
+
+                    // Remove other charging activity only if
+                    // A: the person is not flagged for opportunity charging and has other charging activities
+                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
+                    if((!opportunityCharging&&!otherActsWithCharging.isEmpty())||(opportunityCharging&&otherActsWithCharging.size()>1)) viableChanges.add(ChargingStrategyChange.REMOVEOTHER);
+
+                    if(!otherActsWithCharging.isEmpty()&&!otherActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEOTHER_ADDOTHER);
+
                     // Person has a private charger at home or work
                     if(personHasHomeCharger&&personHasWorkCharger){
-                        // Person has both, home and work charger
-                        // Options: 
-                        // 0: remove work, add home charging (charge at home instead of at work)
-                        // 1: remove home, add work charging (charge at work instead of at home)
-                        // 2: remove work, add work charging (charge some other day at work)
-                        // 3: remove home, add home charging (charge some other day at home)
-                        // 4: add home charging
-                        // 5: add work charging
-                        // 6: add other charging
-                        // 7: remove home charging
-                        // 8: remove work charging
-                        // 9: remove other charging (if possible)
-                        // 10: remove other, add other charging (charge at some other non-home/non-work activity)
                         
-                        randomAction = random.nextInt(11);
-
-                        switch(randomAction) {
-                            case 0:
-                                if(workActsWithCharging.size()>0&&remainingHomeChargingOpportunities){
-                                    // Remove work, add home charging
-                                    changeChargingActivity(planElements, workActsWithCharging, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 1:
-                                if(homeActsWithCharging.size()>0&&remainingWorkChargingOpportunities){
-                                    // Remove home, add work charging
-                                    changeChargingActivity(planElements, homeActsWithCharging, workActsWithoutCharging);
-                                }
-                                break;
-                            case 2:
-                                if(workActsWithCharging.size()>0&&remainingWorkChargingOpportunities){
-                                    // Remove work, add work
-                                    changeChargingActivity(planElements, workActsWithCharging, workActsWithoutCharging);
-                                }
-                                break;
-                            case 3:
-                                if(homeActsWithCharging.size()>0&&remainingHomeChargingOpportunities){
-                                    // Remove home, add home
-                                    changeChargingActivity(planElements, homeActsWithCharging, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 4: 
-                                if(remainingHomeChargingOpportunities)
-                                {
-                                    // Add home
-                                    addChargingActivity(planElements, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 5: 
-                                if(remainingWorkChargingOpportunities)
-                                {
-                                    // Add work
-                                    addChargingActivity(planElements, workActsWithoutCharging);
-                                }
-                                break;
-                            case 6: 
-                                if(remainingOtherChargingOpportunities)
-                                {
-                                    // Add other
-                                    addChargingActivity(planElements, otherActsWithoutCharging);
-                                }
-                                break;
-                            case 7: 
-                                if(homeActsWithCharging.size()>0)
-                                {
-                                    // Remove home
-                                    removeChargingActivity(planElements, homeActsWithCharging);
-                                }
-                                break;
-                            case 8: 
-                                if(workActsWithCharging.size()>0)
-                                {
-                                    // Remove work
-                                    removeChargingActivity(planElements, workActsWithCharging);
-                                }
-                                break;
-                            case 9: 
-                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
-                                {
-                                    // Remove other charging activity only if
-                                    // A: the person is not flagged for opportunity charging and has other charging activities
-                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
-                                    removeChargingActivity(planElements, otherActsWithCharging);
-                                }
-                                break;
-                            case 10: 
-                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
-                                {
-                                    // Remove other, add other
-                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
-                                }
-                                break;
-                        }
-
+                        // Person has both, home and work charger                 
+                        if(!workActsWithCharging.isEmpty()&&!homeActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK_ADDHOME);
+                        if(!homeActsWithCharging.isEmpty()&&!workActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEHOME_ADDWORK);
+                        if(!workActsWithCharging.isEmpty()&&!workActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK_ADDWORK);
+                        if(!homeActsWithCharging.isEmpty()&&!homeActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEHOME_ADDHOME);
 
                     }
                     else if(personHasHomeCharger&&!personHasWorkCharger){
                         // Person has a home charger, but not a work charger
-                        // Options: 
-                        // 0: remove home, add home charging (charge some other day at home)
-                        // 1: add home charging
-                        // 2: add work charging
-                        // 3: add other charging
-                        // 4: remove home charging
-                        // 5: remove work charging
-                        // 6: remove other charging (if possible)
-                        // 7: remove other, add other charging (charge at some other non-home/non-work activity)
-
-                        randomAction = random.nextInt(8);
-                        
-                        switch(randomAction) {
-                           
-                            case 0:
-                                if(homeActsWithCharging.size()>0&&remainingHomeChargingOpportunities){
-                                    // Remove home, add home
-                                    changeChargingActivity(planElements, homeActsWithCharging, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 1: 
-                                if(remainingHomeChargingOpportunities)
-                                {
-                                    // Add home
-                                    addChargingActivity(planElements, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 2: 
-                                if(remainingWorkChargingOpportunities)
-                                {
-                                    // Add work
-                                    addChargingActivity(planElements, workActsWithoutCharging);
-                                }
-                                break;
-                            case 3: 
-                                if(remainingOtherChargingOpportunities)
-                                {
-                                    // Add other
-                                    addChargingActivity(planElements, otherActsWithoutCharging);
-                                }
-                                break;
-                            case 4: 
-                                if(homeActsWithCharging.size()>0)
-                                {
-                                    // Remove home
-                                    removeChargingActivity(planElements, homeActsWithCharging);
-                                }
-                                break;
-                            case 5: 
-                                if(workActsWithCharging.size()>0)
-                                {
-                                    // Remove work
-                                    removeChargingActivity(planElements, workActsWithCharging);
-                                }
-                                break;
-                            case 6: 
-                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
-                                {
-                                    // Remove other charging activity only if
-                                    // A: the person is not flagged for opportunity charging and has other charging activities
-                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
-                                    removeChargingActivity(planElements, otherActsWithCharging);
-                                }
-                                break;
-                            case 7: 
-                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
-                                {
-                                    // Remove other, add other
-                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
-                                }
-                                break;
-                        }
-
+                        if(!homeActsWithCharging.isEmpty()&&!homeActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEHOME_ADDHOME);
                     }
                     else{
-                        // Person has a work charger, but not a home charger
-                        // Options: 
-                        // 0: remove work, add work charging (charge some other day at work)
-                        // 1: add home charging
-                        // 2: add work charging
-                        // 3: add other charging
-                        // 4: remove home charging
-                        // 5: remove work charging
-                        // 6: remove other charging (if possible)
-                        // 7: remove other, add other charging (charge at some other non-home/non-work activity)
-                        
-                        randomAction = random.nextInt(8);
-
-                        switch(randomAction) {
-                            
-                            case 0:
-                                if(workActsWithCharging.size()>0&&remainingWorkChargingOpportunities){
-                                    // Remove work, add work
-                                    changeChargingActivity(planElements, workActsWithCharging, workActsWithoutCharging);
-                                }
-                                break;
-                            case 1: 
-                                if(remainingHomeChargingOpportunities)
-                                {
-                                    // Add home
-                                    addChargingActivity(planElements, homeActsWithoutCharging);
-                                }
-                                break;
-                            case 2: 
-                                if(remainingWorkChargingOpportunities)
-                                {
-                                    // Add work
-                                    addChargingActivity(planElements, workActsWithoutCharging);
-                                }
-                                break;
-                            case 3: 
-                                if(remainingOtherChargingOpportunities)
-                                {
-                                    // Add other
-                                    addChargingActivity(planElements, otherActsWithoutCharging);
-                                }
-                                break;
-                            case 4: 
-                                if(homeActsWithCharging.size()>0)
-                                {
-                                    // Remove home
-                                    removeChargingActivity(planElements, homeActsWithCharging);
-                                }
-                                break;
-                            case 5: 
-                                if(workActsWithCharging.size()>0)
-                                {
-                                    // Remove work
-                                    removeChargingActivity(planElements, workActsWithCharging);
-                                }
-                                break;
-                            case 6: 
-                                if((!opportunityCharging&&otherActsWithCharging.size()>0)||(opportunityCharging&&otherActsWithCharging.size()>1))
-                                {
-                                    // Remove other charging activity only if
-                                    // A: the person is not flagged for opportunity charging and has other charging activities
-                                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
-                                    removeChargingActivity(planElements, otherActsWithCharging);
-                                }
-                                break;
-                            case 7: 
-                                if(otherActsWithCharging.size()>0&&remainingOtherChargingOpportunities)
-                                {
-                                    // Remove other, add other
-                                    changeChargingActivity(planElements, otherActsWithCharging, otherActsWithoutCharging);
-                                }
-                                break;
-                        }
-
-
+                        // Person has a work charger, but not a home charger                       
+                        if(!workActsWithCharging.isEmpty()&&!workActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK_ADDWORK);
                     }
+
+                    ChargingStrategyChange randomAction = viableChanges.get(random.nextInt(viableChanges.size()));
+
+                    switch(randomAction) {
+                        case REMOVEWORK_ADDHOME:
+                            changeChargingActivity(workActsWithCharging, homeActsWithoutCharging);
+                            break;
+                        case REMOVEHOME_ADDWORK:
+                            // Remove home, add work charging
+                            changeChargingActivity(homeActsWithCharging, workActsWithoutCharging);
+                            break;
+                        case REMOVEWORK_ADDWORK:
+                            // Remove work, add work
+                            changeChargingActivity(workActsWithCharging, workActsWithoutCharging);
+                            break;
+                        case REMOVEHOME_ADDHOME:
+                            // Remove home, add home
+                            changeChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
+                            break;
+                        case ADDHOME: 
+                            // Add home
+                            addChargingActivity(homeActsWithoutCharging);
+                            break;
+                        case ADDWORK: 
+                            // Add work
+                            addChargingActivity(workActsWithoutCharging);
+                            break;
+                        case ADDOTHER: 
+                            // Add other
+                            addChargingActivity(otherActsWithoutCharging);
+                            break;
+                        case REMOVEHOME:
+                            // Remove home
+                            removeChargingActivity(homeActsWithCharging);
+                            break;
+                        case REMOVEWORK: 
+                            // Remove work
+                            removeChargingActivity(workActsWithCharging);
+                            break;
+                        case REMOVEOTHER: 
+                            // Remove other, add other
+                            removeChargingActivity(otherActsWithCharging);
+                            break;
+                        case REMOVEOTHER_ADDOTHER: 
+                            // Remove other, add other
+                            changeChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
+                            break;
+                    }
+
                 }
                 else
                 {
                     // Person has no private charger and is entirely reliant on public chargers
                     // -> Randomly change, remove, or add a charging activity with equal probability
-                    randomAction = random.nextInt(3); 
 
-                    switch(randomAction) {
+                    switch(random.nextInt(3)) {
                         case 0:
-                            if(noChargingActIds.size()>0&allChargingActIds.size()>0){
-                                changeChargingActivity(planElements, allChargingActIds, noChargingActIds);
+                            if(!noChargingActs.isEmpty()&&!allChargingActs.isEmpty()){
+                                changeChargingActivity(allChargingActs, noChargingActs);
                             }
                             break;
                         case 1:
-                            if(successfulChargingActIds.size()>0){
-                                removeChargingActivity(planElements, allChargingActIds);
+                            if(!successfulChargingActs.isEmpty()){
+                                removeChargingActivity(allChargingActs);
                             }
                             break;
                         case 2:
-                            if(noChargingActIds.size()>0){
-                                addChargingActivity(planElements, noChargingActIds);
+                            if(!noChargingActs.isEmpty()){
+                                addChargingActivity(noChargingActs);
                             }
                             break;
                     }
@@ -454,58 +264,30 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
 
     }
 
-    private void changeChargingActivityTime(List<PlanElement> planElements, ArrayList<Integer> failedChargingActIds) {
-        // select random failed charging activity and try changing end time of previous activity
-        int n = failedChargingActIds.size();
-        if (n > 0) {
-            int randInt = random.nextInt(n);
-            int actId = failedChargingActIds.get(randInt);
-            if (actId >= 2) {
-                Activity selectedActivity = (Activity) planElements.get(actId);
-                Leg previousLeg = (Leg) planElements.get(actId - 1);
-                Activity previousActivity = (Activity) planElements.get(actId - 2);
-                double timeDifference = random.nextDouble() * maxTimeFlexibility; // 0 to 10 minutes
-                double earliestPossibleTime = 0;
-                if (actId >= 4) {
-                    earliestPossibleTime = ((Activity) planElements.get(actId - 4)).getEndTime().seconds();
-                }
-                if (previousActivity.getEndTime().seconds() - timeDifference > earliestPossibleTime) {
-                    previousActivity.setEndTime(previousActivity.getEndTime().seconds() - timeDifference);
-                    previousLeg.setDepartureTime(previousLeg.getDepartureTime().seconds() - timeDifference);
-                    selectedActivity.setType(selectedActivity.getType() + CHARGING_IDENTIFIER);
-                }
-            }
-        }
-    }
-
-    private void addChargingActivity(List<PlanElement> planElements, ArrayList<Integer> noChargingActIds) {
+    private void addChargingActivity(HashMap<Integer, Activity> noChargingActs) {
         // select random activity without charging and change to activity with charging
-        int n = noChargingActIds.size();
-        if (n > 0) {
-            int randInt = random.nextInt(n);
-            int actId = noChargingActIds.get(randInt);
-            Activity selectedActivity = (Activity) planElements.get(actId);
+        if (!noChargingActs.isEmpty()) {
+            Activity selectedActivity = getRandomActivity(noChargingActs);
             selectedActivity.setType(selectedActivity.getType() + CHARGING_IDENTIFIER);
         }
     }
 
-    private void removeChargingActivity(List<PlanElement> planElements, ArrayList<Integer> successfulChargingActIds) {
+    private void removeChargingActivity(HashMap<Integer, Activity> successfulChargingActs) {
         // select random activity with charging and change to activity without charging
-        int n = successfulChargingActIds.size();
-        if (n > 0) {
-            int randInt = random.nextInt(n);
-            int actId = successfulChargingActIds.get(randInt);
-            Activity selectedActivity = (Activity) planElements.get(actId);
+        if (!successfulChargingActs.isEmpty()) {
+            Activity selectedActivity = getRandomActivity(successfulChargingActs);
             selectedActivity.setType(selectedActivity.getType().replace(CHARGING_IDENTIFIER, ""));
         }
     }
 
-    private void changeChargingActivity(List<PlanElement> planElements,
-                                ArrayList<Integer> chargingActIds,
-                                ArrayList<Integer> noChargingActIds) {
+    private void changeChargingActivity(
+                                HashMap<Integer, Activity> chargingActs,
+                                HashMap<Integer, Activity> noChargingActs) {
         // Change by subsequently removing and adding charging activities
-        removeChargingActivity(planElements, chargingActIds);
-        addChargingActivity(planElements, noChargingActIds);
+        if (!chargingActs.isEmpty() && !noChargingActs.isEmpty()) {
+            removeChargingActivity(chargingActs);
+            addChargingActivity(noChargingActs);
+        }
     }
 
     @Override
@@ -534,4 +316,55 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
     @Override
     public void reset(int iteration) {
     }
+
+    private HashMap<Integer, Activity> getActivities(Plan plan){
+
+		HashMap<Integer, Activity> activityMap = new HashMap<>();
+
+        List<PlanElement> plan_elements = plan.getPlanElements();
+        int N_plan_elements = plan_elements.size();
+
+		for(int i=0; i<N_plan_elements; i++){
+
+            PlanElement pe = plan_elements.get(i);
+
+			if (pe instanceof Activity) {
+
+				activityMap.put(i, (Activity) pe);
+				
+			}
+		
+		}
+		return activityMap;
+	}
+
+    private HashMap<Integer, Activity> getActsFromHashMapContainsType(HashMap<Integer, Activity> hashmap_in, String actType)
+    {
+        return new HashMap<>(
+            hashmap_in.entrySet().stream().filter(actEntry -> actEntry.getValue().getType().contains(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
+    }
+
+    private HashMap<Integer, Activity> getActsFromHashMapNotContainsType(HashMap<Integer, Activity> hashmap_in, String actType)
+    {
+        return new HashMap<>(hashmap_in.entrySet().stream().filter(actEntry -> !actEntry.getValue().getType().contains(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
+    }
+
+    private HashMap<Integer, Activity> getActsFromHashMapNotEqualsType(HashMap<Integer, Activity> hashmap_in, String actType)
+    {
+        return new HashMap<>(hashmap_in.entrySet().stream().filter(actEntry -> !actEntry.getValue().getType().equals(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
+    }
+
+    private Integer getRandomKey(HashMap<Integer, Activity> hashmap_in)
+    {
+        Random random = new Random();
+        Integer randomKey = (Integer) hashmap_in.keySet().toArray()[random.nextInt(hashmap_in.keySet().toArray().length)];
+
+        return randomKey;
+    }
+
+    private Activity getRandomActivity(HashMap<Integer, Activity> hashmap_in)
+    {
+        return hashmap_in.get(getRandomKey(hashmap_in));
+    }
+
 }

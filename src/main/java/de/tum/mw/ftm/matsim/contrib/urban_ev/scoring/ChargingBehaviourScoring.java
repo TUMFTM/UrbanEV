@@ -24,6 +24,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String LAST_ACT_IDENTIFIER = " end";
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
+    private double rangeAnxietyThreshold;
 
     final ChargingBehaviourScoringParameters params;
     Person person;
@@ -34,18 +35,19 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.person = person;
         String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
         this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
+        this.rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
     }
 
     @Override
     public void handleEvent(Event event) {
         if (event.getEventType().equals("scoring")) {
+            
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
 
             double soc = chargingBehaviourScoringEvent.getSoc();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
 
             // punish soc below threshold
-            double rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
             if (soc > 0 && soc < rangeAnxietyThreshold) {
                 double delta_score = params.marginalUtilityOfRangeAnxiety_soc * (rangeAnxietyThreshold - soc) / rangeAnxietyThreshold;
                 chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
@@ -106,11 +108,9 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             // punish if opportunity charging person fails to opportunity charge during the simulation
             if (activityType.contains(LAST_ACT_IDENTIFIER)){
                 
-                String opportunityChargingPerson_str = person.getAttributes().getAttribute("opportunityCharging") != null ? person.getAttributes().getAttribute("opportunityCharging").toString() : "false";
-                boolean opportunityChargingPerson = opportunityChargingPerson_str.equals("true") ? true : false;
                 double delta_score = 0;
 
-                if(!opportunityChargingPerson){
+                if(!opportunityCharging){
                     delta_score=0;
                 }
                 else{

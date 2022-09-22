@@ -180,8 +180,10 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 						newLastActinPlan.setEndTime(endTime);
 						if(!newLastActinPlan.getType().contains("end"))
 						{
-							newLastActinPlan.setType(newLastActinPlan.getType().replace(" charging", "").concat(" end"));
+							newLastActinPlan.setType(newLastActinPlan.getType().concat(" end"));
 						}
+						// make sure charging is never associated with the end activity 
+						newLastActinPlan.setType(newLastActinPlan.getType().replace(" charging", ""));
 						lastActinPlanEndingAfterSim.setType(lastActinPlanEndingAfterSim.getType().replace(" end", ""));
 						plan.addActivity(newLastActinPlan);
 					}
@@ -352,7 +354,7 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		if (actCoord.getX()!=0&&actCoord.getY()!=0){
 			String chargerType = ChargerSpecification.DEFAULT_CHARGER_TYPE;
 			int plugCount = ChargerSpecification.DEFAULT_PLUG_COUNT;
-			List<Id<ElectricVehicle>> allowedEvIds = new ArrayList();
+			List<Id<ElectricVehicle>> allowedEvIds = new ArrayList<>();
 			allowedEvIds.add(Id.create(ownerId, ElectricVehicle.class));
 
 			ChargerSpecification chargerSpecification = ImmutableChargerSpecification.newBuilder()
@@ -466,7 +468,9 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 					if(
 						((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
 						&&
-						availablePublicChargers(act.getCoord(), parkingSearchRadius)
+						!actType.contains("end")
+						&&
+						availablePublicChargers(act.getCoord(), parkingSearchRadius)						
 						)
 					{
 						// store all activities that are not at home or work to later add a non-home/non-work charging activity if none is present in the plan
