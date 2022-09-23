@@ -22,14 +22,17 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     }
 
     private double score;
-    private boolean opportunityCharging;
-    private boolean hasChargerAtHome;
+    
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String LAST_ACT_IDENTIFIER = " end";
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
+    
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
-    private double rangeAnxietyThreshold;
-    private Id<Person> personId;
+    
+    private final double rangeAnxietyThreshold;
+    private final Id<Person> personId;
+    private final boolean opportunityCharging;
+    private final boolean hasChargerAtHome;
     
 
     final ChargingBehaviourScoringParameters params;
@@ -58,7 +61,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             // activity independent scoring components
 
             // punish soc below threshold
-            if (soc > 0 && soc < rangeAnxietyThreshold) {
+            if (soc < rangeAnxietyThreshold && soc > 0) {
                 double delta_score = params.marginalUtilityOfRangeAnxiety_soc * (rangeAnxietyThreshold - soc) / rangeAnxietyThreshold;
                 chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
                 chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
@@ -97,7 +100,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
                 // reward charging at home
-                if (activityType.equals("home" + CHARGING_IDENTIFIER) && hasChargerAtHome) {
+                if (hasChargerAtHome&&activityType.contains("home")) {
                     double delta_score = params.utilityOfHomeCharging;
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.HOME_CHARGING, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.HOME_CHARGING, personId);
