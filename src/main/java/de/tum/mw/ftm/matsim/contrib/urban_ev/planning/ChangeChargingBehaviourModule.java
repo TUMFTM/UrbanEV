@@ -1,8 +1,6 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.planning;
 
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
-import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
-import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEventHandler;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
@@ -15,14 +13,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class ChangeChargingBehaviourModule implements PlanStrategyModule, ChargingBehaviourScoringEventHandler {
+public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String CHARGING_FAILED_IDENTIFIER = " charging failed";
+    private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
+    private static final String NON_CRITICAL_SOC_IDENTIFIER = "nonCriticalSOC";
 
     private Random random = new Random();
-    private Scenario scenario;
-    private Population population;
     private UrbanEVConfigGroup evCfg;
     private int maxNumberSimultaneousPlanChanges;
 
@@ -42,8 +40,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
       
 
     ChangeChargingBehaviourModule(Scenario scenario) {
-        this.scenario = scenario;
-        this.population = this.scenario.getPopulation();
         this.evCfg = (UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev");
         this.maxNumberSimultaneousPlanChanges = evCfg.getMaxNumberSimultaneousPlanChanges();
     }
@@ -71,7 +67,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
         Boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
         Boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
         Boolean personHasPrivateCharger = personHasHomeCharger || personHasWorkCharger;
-        Boolean personCriticalSOC = subpopulation.equals("criticalSOC");      
+        Boolean personCriticalSOC = subpopulation.equals(CRITICAL_SOC_IDENTIFIER);      
 
         // person plan analysis
         HashMap<Integer, Activity> acts = getActivities(plan);
@@ -262,6 +258,8 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
             
         }
 
+        // Assume that the person belongs to the non-critical group after replanning
+        setNonCriticalSubpopulation(person);
     }
 
     private void addChargingActivity(HashMap<Integer, Activity> noChargingActs) {
@@ -293,28 +291,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
     @Override
     public void prepareReplanning(ReplanningContext replanningContext) {
 
-    }
-
-    @Override
-    public void handleEvent(ChargingBehaviourScoringEvent event) {
-        //double startSoc = event.getStartSoc();
-        double soc = event.getSoc();
-        //boolean isLastAct = event.getActivityType().contains("end");
-        Person person = this.population.getPersons().get(event.getPersonId());
-        double personRangeAnxiety = person.getAttributes().getAttribute("rangeAnxietyThreshold")!=null ? Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString()) : this.evCfg.getDefaultRangeAnxietyThreshold();
-        // Make sure agents with a criticalSOC or with a bad end-soc get replanned for sure
-        if (soc<=personRangeAnxiety) {
-            // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-            population.getPersons().get(event.getPersonId()).getAttributes().putAttribute("subpopulation", "criticalSOC");
-        }
-        else{
-            // Remove all non-critical agents from the criticalSOC subpopulation such that they get replanned with the default probability
-            population.getPersons().get(event.getPersonId()).getAttributes().putAttribute("subpopulation", "nonCriticalSOC");
-        }
-    }
-
-    @Override
-    public void reset(int iteration) {
     }
 
     private HashMap<Integer, Activity> getActivities(Plan plan){
@@ -365,6 +341,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule, Chargi
     private Activity getRandomActivity(HashMap<Integer, Activity> hashmap_in)
     {
         return hashmap_in.get(getRandomKey(hashmap_in));
+    }
+
+    private void setNonCriticalSubpopulation(Person person){
+        person.getAttributes().putAttribute("subpopulation", NON_CRITICAL_SOC_IDENTIFIER);
     }
 
 }

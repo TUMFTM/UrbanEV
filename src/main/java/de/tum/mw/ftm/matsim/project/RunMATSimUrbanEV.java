@@ -162,7 +162,7 @@ public class RunMATSimUrbanEV {
 			}
 		});
 
-		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=0 will be added to a special replanning subpopulation that will be replanned in any case
+		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=rangeAnxiety will be added to a special replanning subpopulation that will be replanned in any case
 		Population population = controler.getScenario().getPopulation();
 		population.getPersons().entrySet().forEach(entry->{entry.getValue().getAttributes().putAttribute("subpopulation", "nonCriticalSOC");});
 
