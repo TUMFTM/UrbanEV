@@ -19,11 +19,11 @@
                 name CDATA #REQUIRED
                 consumption CDATA #REQUIRED
                 max_charging_rate CDATA #REQUIRED
-                mass CDATA #REQUIRED
-                width CDATA #REQUIRED
-                height CDATA #REQUIRED
-                length CDATA #REQUIRED
-                cw CDATA #REQUIRED
-                ft CDATA #REQUIRED
-                cb CDATA #REQUIRED
-                spr CDATA #REQUIRED>
+                mass CDATA #IMPLIED
+                width CDATA #IMPLIED
+                height CDATA #IMPLIED
+                length CDATA #IMPLIED
+                cw CDATA #IMPLIED
+                ft CDATA #IMPLIED
+                cb CDATA #IMPLIED
+                spr CDATA #IMPLIED>

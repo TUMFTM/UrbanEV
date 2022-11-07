@@ -39,21 +39,41 @@ public class ElectricVehicleTypesReader extends MatsimXmlParser {
 	@Override
 	public void startTag(String name, Attributes atts, Stack<String> context) {
 		if (TYPE.equals(name)) {
-			ElectricVehicleType type = ElectricVehicleTypeImpl.newBuilder()
-					.id(Id.create(atts.getValue("name"), ElectricVehicleType.class))
-					.name(atts.getValue("name"))
-					.consumption(Double.parseDouble(atts.getValue("consumption")))
-					.maxChargingRate(Double.parseDouble(atts.getValue("max_charging_rate")))
-					.mass(Double.parseDouble(atts.getValue("mass")))
-					.width(Double.parseDouble(atts.getValue("width")))
-					.height(Double.parseDouble(atts.getValue("height")))
-					.length(Double.parseDouble(atts.getValue("length")))
-					.aerodynamicDragCoefficient(Double.parseDouble(atts.getValue("cw")))
-					.rollingDragCoefficient(Double.parseDouble(atts.getValue("ft")))
-					.inertiaResistanceCoefficient(Double.parseDouble(atts.getValue("cb")))
-					.driveTrainEfficiency(Double.parseDouble(atts.getValue("spr")))
-					.build();
-			types.put(type.getId(), type);
+			
+			if (atts.getValue("mass") == null  && atts.getValue("width") == null && atts.getValue("height") == null && atts.getValue("length") == null && atts.getValue("cw") == null && atts.getValue("ft") == null && atts.getValue("cb") == null && atts.getValue("spr") == null){
+				ElectricVehicleType type = ElectricVehicleTypeImpl.newBuilder()
+				.id(Id.create(atts.getValue("name"), ElectricVehicleType.class))
+				.name(atts.getValue("name"))
+				.consumption(Double.parseDouble(atts.getValue("consumption")))
+				.maxChargingRate(Double.parseDouble(atts.getValue("max_charging_rate")))
+				.mass(Double.parseDouble("0"))
+				.width(Double.parseDouble("0"))
+				.height(Double.parseDouble("0"))
+				.length(Double.parseDouble("0"))
+				.aerodynamicDragCoefficient(Double.parseDouble("0"))
+				.rollingDragCoefficient(Double.parseDouble("0"))
+				.inertiaResistanceCoefficient(Double.parseDouble("0"))
+				.driveTrainEfficiency(Double.parseDouble("0"))
+				.build();
+				types.put(type.getId(), type);
+			}
+			else{
+				ElectricVehicleType type = ElectricVehicleTypeImpl.newBuilder()
+				.id(Id.create(atts.getValue("name"), ElectricVehicleType.class))
+				.name(atts.getValue("name"))
+				.consumption(Double.parseDouble(atts.getValue("consumption")))
+				.maxChargingRate(Double.parseDouble(atts.getValue("max_charging_rate")))
+				.mass(Double.parseDouble(atts.getValue("mass")))
+				.width(Double.parseDouble(atts.getValue("width")))
+				.height(Double.parseDouble(atts.getValue("height")))
+				.length(Double.parseDouble(atts.getValue("length")))
+				.aerodynamicDragCoefficient(Double.parseDouble(atts.getValue("cw")))
+				.rollingDragCoefficient(Double.parseDouble(atts.getValue("ft")))
+				.inertiaResistanceCoefficient(Double.parseDouble(atts.getValue("cb")))
+				.driveTrainEfficiency(Double.parseDouble(atts.getValue("spr")))
+				.build();
+				types.put(type.getId(), type);
+			}
 		}
 	}
 

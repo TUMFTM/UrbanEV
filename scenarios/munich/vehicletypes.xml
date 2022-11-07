@@ -1,8 +1,8 @@
 <!DOCTYPE vehicletypes SYSTEM "../dtd/vehicletypes.dtd">
 
 <vehicletypes>
-    <type name="nissan_leaf" consumption="20.6" max_charging_rate="1.5" mass="1545" width="1.788" height="1.530" length="4.490" cw="0.3" ft="0.01" cb="0.191" spr="0.935"/>
-    <type name="renault_zoe" consumption="17.2" max_charging_rate="1.5" mass="1577" width="1.787" height="1.562" length="4.087" cw="0.269" ft="0.01" cb="0.191" spr="0.935"/>
-    <type name="tesla_model_3" consumption="14.3" max_charging_rate="2.0" mass="1684" width="1.850" height="1.443" length="4.694" cw="0.3" ft="0.01" cb="0.191" spr="0.935"/>
-    <type name="audi_etron" consumption="22.6" max_charging_rate="2.0" mass="2445" width="1.935" height="1.629" length="4.901" cw="0.3" ft="0.01" cb="0.191" spr="0.935"/>
+    <type name="nissan_leaf" consumption="20.6" max_charging_rate="1.5" />
+    <type name="renault_zoe" consumption="17.2" max_charging_rate="1.5" />
+    <type name="tesla_model_3" consumption="14.3" max_charging_rate="2.0"/>
+    <type name="audi_etron" consumption="22.6" max_charging_rate="2.0"/>
 </vehicletypes>
