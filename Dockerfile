@@ -17,9 +17,10 @@ ARG APP_DIR
 LABEL maintainer="Merlin Unterfinger <merlin.unterfinger@maptic.ch>"
 WORKDIR ${APP_DIR}
 COPY docker-entrypoint.sh ./
-CMD chmod +x ./docker-entrypoint.sh
 COPY --from=build ${APP_DIR}/*.txt ./resources/
 COPY --from=build ${APP_DIR}/target/*-jar-with-dependencies.jar ./matsim.jar
+RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./matsim.jar
 ENV MATSIM_HOME=${APP_DIR} \
     MATSIM_INPUT=${APP_DIR}/data/input \
     MATSIM_OUTPUT=${APP_DIR}/data/output
