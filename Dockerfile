@@ -16,9 +16,11 @@ FROM openjdk:11-jre-slim
 ARG APP_DIR
 LABEL maintainer="Merlin Unterfinger <merlin.unterfinger@maptic.ch>"
 WORKDIR ${APP_DIR}
+USER root
 COPY docker-entrypoint.sh ./
 COPY --from=build ${APP_DIR}/*.txt ./resources/
 COPY --from=build ${APP_DIR}/target/*-jar-with-dependencies.jar ./matsim.jar
+USER 1001
 RUN chmod +x ./entrypoint.sh
 RUN chmod +x ./matsim.jar
 ENV MATSIM_HOME=${APP_DIR} \
