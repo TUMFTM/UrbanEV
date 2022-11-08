@@ -34,3 +34,4 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/urbanev/docker-image:latest
           labels: git-comit=https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+          build-args: "COMMIT=https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
