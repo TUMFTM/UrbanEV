@@ -68,6 +68,6 @@ _check_output_directory() {
 _print_header
 _check_input_directory
 _check_output_directory
-echo "$COMMIT" > $MATSIM_OUTPUT/code-version.txt
+echo "$COMMIT" > $MATSIM_INPUT/code-version.txt
 printf '%s\n' ""
 exec "$@"
