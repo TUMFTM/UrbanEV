@@ -1,6 +1,4 @@
 ARG APP_DIR=/opt/matsim
-ARG COMMIT
-ENV COMMIT ${COMMIT}
 FROM maven:3.6.0-jdk-11-slim AS build
 ARG APP_DIR
 WORKDIR ${APP_DIR}
@@ -25,6 +23,8 @@ RUN chmod +x ./matsim.jar
 ENV MATSIM_HOME=${APP_DIR} \
     MATSIM_INPUT=${APP_DIR}/data/input \
     MATSIM_OUTPUT=${APP_DIR}/data/output
+ARG COMMIT
+ENV COMMIT ${COMMIT}
 RUN apt-get update && apt-get install -y \
     libfreetype6 \
     libfontconfig1 \
