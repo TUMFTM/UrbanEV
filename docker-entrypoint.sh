@@ -64,7 +64,7 @@ _check_output_directory() {
         fi
     fi
 }
-
+echo "$COMMIT" > $MATSIM_OUTPUT/code-version.txt
 _print_header
 _check_input_directory
 _check_output_directory
