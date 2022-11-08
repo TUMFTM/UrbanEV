@@ -44,24 +44,39 @@ public class RunMATSimUrbanEV {
 		String configPath = "";
 		int initIterations = 0;
 		int initIterationRepetitions = 0;
+		// Check, if MATSim runs inside container 
+        String inputPath = Environment.getMatsimInputPath();
+        String outputPath = Environment.getMatsimOutputPath();
+        String matsimVersion = Environment.getMatsimVersion();
+		if (inputPath != null) {
 
-		if (args != null && args.length == 3) {
-			configPath = args[0];
-			initIterations = Integer.parseInt(args[1]);
-			initIterationRepetitions = Integer.parseInt(args[2]);
-		} else if (args != null && args.length == 2){
-			configPath = args[0];
-			initIterations = Integer.parseInt(args[1]);
-			initIterationRepetitions = 0;
-		} else if (args != null && args.length == 1){
-			configPath = args[0];
+			log.info("Starting MATSim in Docker container." + matsimVersion);
+			configPath = String.format("%s/%s", inputPath, "config.xml");
 			initIterations = 0;
-			initIterationRepetitions = 0;
 		}
-		else{
-			System.out.println("Config file missing. Please supply a config file path as a program argument.");
-			throw new IOException("Could not start simulation. Config file missing.");
+        else 
+		{
+			if (args != null && args.length == 3) {
+				configPath = args[0];
+				initIterations = Integer.parseInt(args[1]);
+				initIterationRepetitions = Integer.parseInt(args[2]);
+			} else if (args != null && args.length == 2){
+				configPath = args[0];
+				initIterations = Integer.parseInt(args[1]);
+				initIterationRepetitions = 0;
+			} else if (args != null && args.length == 1){
+				configPath = args[0];
+				initIterations = 0;
+				initIterationRepetitions = 0;
+			}
+			else{
+				System.out.println("Config file missing. Please supply a config file path as a program argument.");
+				throw new IOException("Could not start simulation. Config file missing.");
+			}
+
+
 		}
+
 
 		// Inform user
 		log.info("Config file path: " + configPath);
@@ -70,7 +85,10 @@ public class RunMATSimUrbanEV {
 		// Prepare configs
 		ConfigGroup[] configGroups = new ConfigGroup[]{new EvConfigGroup(), new UrbanEVConfigGroup()};
 		Config config = ConfigUtils.loadConfig(configPath, configGroups);
-
+		
+		if (outputPath != null){
+			config.controler().setOutputDirectory(outputPath);
+		}
 		if (initIterations > 0) {
 			
 			// Configure initialization
@@ -165,7 +183,11 @@ public class RunMATSimUrbanEV {
 		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=rangeAnxiety will be added to a special replanning subpopulation that will be replanned in any case
 		Population population = controler.getScenario().getPopulation();
 		population.getPersons().entrySet().forEach(entry->{entry.getValue().getAttributes().putAttribute("subpopulation", "nonCriticalSOC");});
+		long start = System.currentTimeMillis();
 
 		controler.run();
+		long finish = System.currentTimeMillis();
+		long timeElapsed = finish - start;
+		System.out.println(timeElapsed);
 	}
 }

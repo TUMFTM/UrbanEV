@@ -62,7 +62,7 @@ V0.1
 
 ## Authors
 
-Lennart Adenaw, Julius Drosten
+Lennart Adenaw, Julius Drosten, Fabian Schuhmann
 
 ## License
 
