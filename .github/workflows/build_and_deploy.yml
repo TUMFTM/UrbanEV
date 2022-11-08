@@ -33,4 +33,4 @@ jobs:
           file: Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/urbanev/docker-image:latest
-          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}, git-commit=${{ github.sha }}, git-ref =${{ github.ref }}
