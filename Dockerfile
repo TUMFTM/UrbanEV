@@ -1,5 +1,6 @@
 ARG APP_DIR=/opt/matsim
-
+ARG COMMIT
+ENV COMMIT ${COMMIT}
 FROM maven:3.6.0-jdk-11-slim AS build
 ARG APP_DIR
 WORKDIR ${APP_DIR}
