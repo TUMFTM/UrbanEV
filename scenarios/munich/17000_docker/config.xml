@@ -34,7 +34,7 @@
 	<module name="global">
 		<param name="randomSeed" value="4711" />
 		<param name="coordinateSystem" value="EPSG:31468" />
-		<param name="numberOfThreads" value= "16" />
+		<param name="numberOfThreads" value= "1" />
 	</module>
 
 	<module name="network">
@@ -46,7 +46,7 @@
 		<!-- Estimated number of events during mobsim run. An optional optimization hint for the framework. -->
 		<param name="estimatedNumberOfEvents" value="null" />
 		<!-- Number of threads for parallel events handler. _null_ means the framework decides by itself. 0 is currently not possible. -->
-		<param name="numberOfThreads" value="16" />
+		<param name="numberOfThreads" value="1" />
 		<!-- If enabled, each event handler is assigned to its own thread. Note that enabling this feature disabled the numberOfThreads option! This feature is still experimental! -->
 		<param name="oneThreadPerHandler" value="false" />
 		<!-- If enabled, it is ensured that all events that are created during a time step of the mobility simulation are processed before the next time step is simulated. E.g. neccessary when within-day replanning is used. -->
@@ -58,15 +58,19 @@
 	</module>
 
 	<module name="controler">
-		<param name="outputDirectory" value="scenarios/munich/17k_reduced_private_chargers/output" />
+		<param name="outputDirectory" value="scenarios/munich/17k_reduced_private_chargers/output_2" />
 		<param name="overwriteFiles" value="deleteDirectoryIfExists" />
 		<param name="firstIteration" value="0"/>
-		<param name="lastIteration" value="1"/>
+		<param name="lastIteration" value="3"/>
 		<param name="eventsFileFormat" value="xml"/>
 		<param name="mobsim" value="qsim"/>
 		<param name="writeEventsInterval" value="50"/>
 		<param name="writePlansInterval" value="50"/>
 		<param name="routingAlgorithmType" value="FastAStarLandmarks" />
+		<!-- iterationNumber % writeSnapshotsInterval == 0 defines in which iterations snapshots are written to a file. `0' disables snapshots writing completely -->
+		<param name="writeSnapshotsInterval" value="0" />
+		<!-- true if at the end of a run, plans, network, config etc should be dumped to a file -->
+		<param name="dumpDataAtEnd" value="false" />
 	</module>
 
 	<module name="qsim">
@@ -74,7 +78,7 @@
 		<param name="startTime" value="00:00:00"/>
 		<param name="endTime" value="120:00:00"/>
 		<param name="timeStepSize" value="00:00:01" />
-		<param name="numberOfThreads" value= "16" />
+		<param name="numberOfThreads" value= "1" />
 	</module>
 
 	<module name= "strategy">

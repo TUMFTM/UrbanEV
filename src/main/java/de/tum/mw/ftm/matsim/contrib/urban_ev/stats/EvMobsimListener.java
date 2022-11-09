@@ -37,6 +37,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.DriveDischargingHandler
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -47,6 +48,7 @@ import org.matsim.core.mobsim.framework.events.MobsimBeforeCleanupEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener;
 import org.matsim.core.utils.misc.Time;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -72,7 +74,15 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
 	@Override
 	public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent event) {
+		
+		// CleanUp Last Iteration
+		if (iterationCounter.getIterationNumber()>0){
+			File dir_to_delete = new File(controlerIO.getIterationPath(iterationCounter.getIterationNumber()-1));
+			deleteDir(dir_to_delete);
+		}
 
+		//write stats for new iteration
+	
 		// Retrieve ChargingBehaviorScoresCollector Singleton
 		ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
 
@@ -84,6 +94,16 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
 		// Reset ChargingBehaviorScoresCollector for next iteration
 		chargingBehaviorScoresCollector.reset();
+	}
+
+	private void deleteDir(File file) {
+		File[] contents = file.listFiles();
+		if (contents != null) {
+			for (File f : contents) {
+				deleteDir(f);
+			}
+		}
+		file.delete();
 	}
 
 	private void writeChargingStats(){

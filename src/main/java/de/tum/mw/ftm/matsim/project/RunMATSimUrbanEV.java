@@ -70,7 +70,7 @@ public class RunMATSimUrbanEV {
 				initIterationRepetitions = 0;
 			}
 			else{
-				configPath = "C:\\Users\\ga59yog\\Documents\\Fabian-FTM\\99_repo\\urbanev\\scenarios\\munich\\17000\\config.xml";
+				configPath = "C:\\Users\\ga59yog\\Documents\\Fabian-FTM\\99_repo\\urbanev\\scenarios\\munich\\17000_docker\\config.xml";
 				initIterations = 0;
 				//System.out.println("Config file missing. Please supply a config file path as a program argument.");
 				//throw new IOException("Could not start simulation. Config file missing.");

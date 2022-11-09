@@ -1,0 +1,8 @@
+<!DOCTYPE vehicletypes SYSTEM "dtd/vehicletypes.dtd">
+
+<vehicletypes>
+    <type name="nissan_leaf" consumption="20.6" max_charging_rate="1.5" />
+    <type name="renault_zoe" consumption="17.2" max_charging_rate="1.5" />
+    <type name="tesla_model_3" consumption="14.3" max_charging_rate="2.0"/>
+    <type name="audi_etron" consumption="22.6" max_charging_rate="2.0"/>
+</vehicletypes>
