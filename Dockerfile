@@ -13,7 +13,6 @@ RUN mvn -f pom.xml -DskipTests clean package \
 
 FROM openjdk:11-jre-slim
 ARG APP_DIR
-LABEL maintainer="Merlin Unterfinger <merlin.unterfinger@maptic.ch>"
 WORKDIR ${APP_DIR}
 USER root
 COPY --chmod=0755 docker-entrypoint.sh ./
