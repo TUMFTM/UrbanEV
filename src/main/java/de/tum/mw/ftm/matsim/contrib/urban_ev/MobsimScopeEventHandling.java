@@ -147,18 +147,24 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 						if(pe instanceof Activity)
 						{
 							Activity act = (Activity) pe;
-							if(act.getEndTime().seconds()>endTime && Objects.isNull(lastActinPlanEndingAfterSim))
+							if(Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
 							{
 								lastActinPlanEndingAfterSim = act;
 							}
-							else if(act.getEndTime().seconds()>endTime)
+							else if(!Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
 							{
-								// There are even more activities that end after the simulation time, remove those
+								// There are even more activities that end after the simulation time
 								if(act.getEndTime().seconds()>lastActinPlanEndingAfterSim.getEndTime().seconds())
 								{
+									// Remove if the activity ends even later
 									delActivitiesIdx.add(i);
 								}
-								
+
+							}
+							else if(!act.getEndTime().isDefined())
+							{
+								// Remove if the activity has no end time
+								delActivitiesIdx.add(i);
 							}
 						}
 
