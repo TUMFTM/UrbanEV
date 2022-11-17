@@ -33,6 +33,8 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.stats;/*
  */
 
 import com.google.inject.Inject;
+
+import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.DriveDischargingHandler;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
 import org.apache.commons.csv.CSVFormat;
@@ -47,11 +49,13 @@ import org.matsim.core.mobsim.framework.events.MobsimBeforeCleanupEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener;
 import org.matsim.core.utils.misc.Time;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.Objects;
 
 public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
@@ -69,6 +73,8 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 	IterationCounter iterationCounter;
 	@Inject
 	Network network;
+	@Inject
+	UrbanEVConfigGroup urbanEVConfigGroup;
 
 	@Override
 	public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent event) {
@@ -84,6 +90,13 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
 		// Reset ChargingBehaviorScoresCollector for next iteration
 		chargingBehaviorScoresCollector.reset();
+
+		if(urbanEVConfigGroup.isDeleteIterationsOnTheFly()){
+			
+			// Clean up iteration files
+			cleanUpIterations(iterationCounter, urbanEVConfigGroup.isForceKeepNthIteration(), urbanEVConfigGroup.getKeepIterationsModulo());
+		}
+			
 	}
 
 	private void writeChargingStats(){
@@ -247,4 +260,30 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 			io.printStackTrace();
 		}
 	}
+
+	private void deleteDir(File file){
+		File[] contents = file.listFiles();
+		if(!Objects.isNull(contents)){
+			for(File f : contents){
+				deleteDir(f);
+			}
+		}
+		file.delete();
+	}
+
+	private void cleanUpIterations(IterationCounter iterationCounter, boolean forceKeepNthIteration, int moduloKeep) // Todo: Add possibility to preserve predefined iterations
+	{
+		int iteration = iterationCounter.getIterationNumber();
+
+		// delete previous iteration if...
+		if (
+			iteration > 0 && // ... we are at least in it.1  
+				(!forceKeepNthIteration || (forceKeepNthIteration && iteration % moduloKeep != 1)) // ... the previous iteration is not to be kept
+			){
+            File dir_to_delete = new File(controlerIO.getIterationPath(iteration-1)); // Determine previous iteration number
+            deleteDir(dir_to_delete); // Delete last Iteration
+        }
+
+	}
+
 }
