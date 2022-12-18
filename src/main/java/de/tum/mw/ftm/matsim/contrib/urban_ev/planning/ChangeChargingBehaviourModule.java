@@ -181,53 +181,57 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
                         if(!workActsWithCharging.isEmpty()&&!workActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK_ADDWORK);
                     }
 
-                    ChargingStrategyChange randomAction = viableChanges.get(random.nextInt(viableChanges.size()));
+                    if(!viableChanges.isEmpty()) // If there are any viable actions...
+                    {
+                        ChargingStrategyChange randomAction = viableChanges.get(random.nextInt(viableChanges.size())); // ...select a random action ...
 
-                    switch(randomAction) {
-                        case REMOVEWORK_ADDHOME:
-                            changeChargingActivity(workActsWithCharging, homeActsWithoutCharging);
-                            break;
-                        case REMOVEHOME_ADDWORK:
-                            // Remove home, add work charging
-                            changeChargingActivity(homeActsWithCharging, workActsWithoutCharging);
-                            break;
-                        case REMOVEWORK_ADDWORK:
-                            // Remove work, add work
-                            changeChargingActivity(workActsWithCharging, workActsWithoutCharging);
-                            break;
-                        case REMOVEHOME_ADDHOME:
-                            // Remove home, add home
-                            changeChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
-                            break;
-                        case ADDHOME: 
-                            // Add home
-                            addChargingActivity(homeActsWithoutCharging);
-                            break;
-                        case ADDWORK: 
-                            // Add work
-                            addChargingActivity(workActsWithoutCharging);
-                            break;
-                        case ADDOTHER: 
-                            // Add other
-                            addChargingActivity(otherActsWithoutCharging);
-                            break;
-                        case REMOVEHOME:
-                            // Remove home
-                            removeChargingActivity(homeActsWithCharging);
-                            break;
-                        case REMOVEWORK: 
-                            // Remove work
-                            removeChargingActivity(workActsWithCharging);
-                            break;
-                        case REMOVEOTHER: 
-                            // Remove other, add other
-                            removeChargingActivity(otherActsWithCharging);
-                            break;
-                        case REMOVEOTHER_ADDOTHER: 
-                            // Remove other, add other
-                            changeChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
-                            break;
+                        switch(randomAction) { // ...and execute it. If there are no viable actions the person should still be fine, because they are "uncritical" -> do not change anything
+                            case REMOVEWORK_ADDHOME:
+                                changeChargingActivity(workActsWithCharging, homeActsWithoutCharging);
+                                break;
+                            case REMOVEHOME_ADDWORK:
+                                // Remove home, add work charging
+                                changeChargingActivity(homeActsWithCharging, workActsWithoutCharging);
+                                break;
+                            case REMOVEWORK_ADDWORK:
+                                // Remove work, add work
+                                changeChargingActivity(workActsWithCharging, workActsWithoutCharging);
+                                break;
+                            case REMOVEHOME_ADDHOME:
+                                // Remove home, add home
+                                changeChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
+                                break;
+                            case ADDHOME: 
+                                // Add home
+                                addChargingActivity(homeActsWithoutCharging);
+                                break;
+                            case ADDWORK: 
+                                // Add work
+                                addChargingActivity(workActsWithoutCharging);
+                                break;
+                            case ADDOTHER: 
+                                // Add other
+                                addChargingActivity(otherActsWithoutCharging);
+                                break;
+                            case REMOVEHOME:
+                                // Remove home
+                                removeChargingActivity(homeActsWithCharging);
+                                break;
+                            case REMOVEWORK: 
+                                // Remove work
+                                removeChargingActivity(workActsWithCharging);
+                                break;
+                            case REMOVEOTHER: 
+                                // Remove other, add other
+                                removeChargingActivity(otherActsWithCharging);
+                                break;
+                            case REMOVEOTHER_ADDOTHER: 
+                                // Remove other, add other
+                                changeChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
+                                break;
+                        }
                     }
+                    
 
                 }
                 else
