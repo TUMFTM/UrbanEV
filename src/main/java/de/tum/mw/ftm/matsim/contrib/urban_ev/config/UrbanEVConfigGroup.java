@@ -79,6 +79,12 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String KEEP_ITERATIONS_MODULO = "keepIterationsModulo";
     static final String KEEP_ITERATIONS_MODULO_EXP = "[integer] Only applies if 'deleteIterationsOnTheFly' and 'forceKeepNthIteration' are enabled. The, 'keepIterationsModulo' determines which interation folders are kept in addition to the first and last iteration (e.g. if keepIterationsModulo = 10: iterations 0,10,20,..., N are kept). Defaults to 10.";
 
+    public static final String INITIALIZATION_ITERATIONS = "initializationIterations";
+    static final String INITIALIZATION_ITERATIONS_EXP = "[integer] Number of initialization iterations to setup socs and get the simulation starting. After the specified number of iterations concludes, the initialization outputs are used to start the actual simiulation (or trigger another initialization run based on the value of 'initializationRepetitions').";
+
+    public static final String INITIALIZATION_REPETITIONS = "initializationRepetitions";
+    static final String INITIALIZATION_REPETITIONS_EXP = "[integer] Number of repetitions of the initialization routine.";
+
     // Charger parameters
     private boolean generateHomeChargersByPercentage = false;
 
@@ -140,7 +146,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @PositiveOrZero
     private int maxTimeFlexibility = 600;
 
-    // Itertion cleanup parameters
+    // Iteration cleanup parameters
     @NotNull
     private boolean deleteIterationsOnTheFly = false;
 
@@ -150,6 +156,12 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private int keepIterationsModulo = 10;
 
+    // Initialization setup
+    @PositiveOrZero
+    private int initializationIterations = 0;
+
+    @PositiveOrZero
+    private int initializationRepetitions = 0;
 
     public UrbanEVConfigGroup() {
         super(GROUP_NAME);
@@ -180,6 +192,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
         map.put(FORCE_KEEP_NTH_ITERATION, FORCE_KEEP_NTH_ITERATION_EXP);
         map.put(KEEP_ITERATIONS_MODULO, KEEP_ITERATIONS_MODULO_EXP);
+        map.put(INITIALIZATION_ITERATIONS, INITIALIZATION_ITERATIONS_EXP);
+        map.put(INITIALIZATION_REPETITIONS, INITIALIZATION_REPETITIONS_EXP);
         return map;
     }
 
@@ -385,6 +399,26 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(KEEP_ITERATIONS_MODULO)
     public void setkeepIterationsModulo(int keepIterationsModulo) {
         this.keepIterationsModulo = keepIterationsModulo;
+    }
+
+    @StringGetter(INITIALIZATION_ITERATIONS)
+    public int getInitializationIterations() {
+        return initializationIterations;
+    }
+
+    @StringSetter(INITIALIZATION_ITERATIONS)
+    public void setInitializationIterations(int initializationIterations) {
+        this.initializationIterations = initializationIterations;
+    }
+
+    @StringGetter(INITIALIZATION_REPETITIONS)
+    public int getInitializationRepetitions() {
+        return initializationRepetitions;
+    }
+
+    @StringSetter(INITIALIZATION_REPETITIONS)
+    public void setInitializationRepetitions(int initializationRepetitions) {
+        this.initializationRepetitions = initializationRepetitions;
     }
 
 }
