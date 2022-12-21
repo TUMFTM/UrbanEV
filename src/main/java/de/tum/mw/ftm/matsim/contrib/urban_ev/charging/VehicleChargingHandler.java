@@ -152,8 +152,8 @@ public class VehicleChargingHandler
 					socUponArrival,
 					startSoc,
 					walkingDistance,
-					null,
-					null,
+					0.0,
+					0.0,
 					ScoreTrigger.ACTIVITYSTART
 					)
 					);
@@ -204,7 +204,7 @@ public class VehicleChargingHandler
 						socUponDeparture,
 						startSoc,
 						walkingDistance,
-						null,
+						0.0,
 						pluggedDuration,
 						ScoreTrigger.ACTIVITYEND
 						)
