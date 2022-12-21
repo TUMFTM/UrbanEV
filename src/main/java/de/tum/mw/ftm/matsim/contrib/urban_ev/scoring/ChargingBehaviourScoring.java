@@ -123,7 +123,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 
                 double pluggedDuration = chargingBehaviourScoringEvent.getPluggedDuration();
                 
-                if(pluggedDuration>urbanEVConfig.getStationHoggingThresholdMinutes()*60){
+                if(
+                    pluggedDuration>urbanEVConfig.getStationHoggingThresholdMinutes()*60 && // If the vehicle is plugged for an excessive duration
+                    !(activityType.contains("home") || (activityType.contains("work") && !activityType.contains("work_related"))) // and charging was performed publicly
+                    ) 
+                {
                     double delta_score = params.marginalUtilityOfStationHogging;
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.STATION_HOGGING, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.STATION_HOGGING, personId);
