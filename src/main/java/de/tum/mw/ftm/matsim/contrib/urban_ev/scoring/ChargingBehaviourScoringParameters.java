@@ -12,6 +12,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
     public final double utilityOfHomeCharging;
     public final double marginalUtilityOfSocDifference;
     public final double failedOpportunityChargingUtility;
+    public final double marginalUtilityOfStationHogging;
 
     private ChargingBehaviourScoringParameters(
             final double marginalUtilityOfRangeAnxiety_soc,
@@ -19,13 +20,15 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             final double marginalUtilityOfWalking_m,
             final double utilityOfHomeCharging,
             final double marginalUtilityOfSocDifference,
-            final double failedOpportunityChargingUtility) {
+            final double failedOpportunityChargingUtility,
+            final double marginalUtilityOfStationHogging) {
         this.marginalUtilityOfRangeAnxiety_soc = marginalUtilityOfRangeAnxiety_soc;
         this.utilityOfEmptyBattery = utilityOfEmptyBattery;
         this.marginalUtilityOfWalking_m = marginalUtilityOfWalking_m;
         this.utilityOfHomeCharging = utilityOfHomeCharging;
         this.marginalUtilityOfSocDifference = marginalUtilityOfSocDifference;
         this.failedOpportunityChargingUtility = failedOpportunityChargingUtility;
+        this.marginalUtilityOfStationHogging = marginalUtilityOfStationHogging;
     }
 
     public static final class Builder {
@@ -35,6 +38,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         private double utilityOfHomeCharging;
         private double marginalUtilityOfSocDifference;
         private double failedOpportunityChargingUtility;
+        private double marginalUtilityOfStationHogging;
 
         public Builder(final Scenario scenario) {
             this((UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev"));
@@ -47,6 +51,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             utilityOfHomeCharging = configGroup.getHomeChargingUtility();
             marginalUtilityOfSocDifference = configGroup.getSocDifferenceUtility();
             failedOpportunityChargingUtility = configGroup.getFailedOpportunityChargingUtility();
+            marginalUtilityOfStationHogging = configGroup.getStationHoggingUtility();
         }
 
         public ChargingBehaviourScoringParameters build() {
@@ -56,7 +61,8 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
                     marginalUtilityOfWalking_m,
                     utilityOfHomeCharging,
                     marginalUtilityOfSocDifference,
-                    failedOpportunityChargingUtility
+                    failedOpportunityChargingUtility,
+                    marginalUtilityOfStationHogging
             );
         }
     }
