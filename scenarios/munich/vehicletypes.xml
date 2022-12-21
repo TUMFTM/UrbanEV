@@ -1,4 +1,4 @@
-<!DOCTYPE vehicletypes SYSTEM "../dtd/vehicletypes.dtd">
+<!DOCTYPE vehicletypes SYSTEM "https://raw.githubusercontent.com/TUMFTM/UrbanEV/main/scenarios/dtd/vehicletypes.dtd">
 
 <vehicletypes>
     <type name="nissan_leaf" consumption="20.6" max_charging_rate="1.5" mass="1545" width="1.788" height="1.530" length="4.490" cw="0.3" ft="0.01" cb="0.191" spr="0.935"/>

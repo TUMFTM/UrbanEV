@@ -6,6 +6,7 @@ oftvis/
 .idea/
 output_archive/
 output_*/
+.vscode/
 
 
 # Files #
@@ -16,6 +17,7 @@ RunOFTVis.java
 *.iml
 *.swp
 *.swo
+*.log
 
 
 # Compiled source #

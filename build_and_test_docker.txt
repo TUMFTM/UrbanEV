@@ -1,0 +1,2 @@
+DOCKER_BUILDKIT=1 docker build -t urbanev_test .
+docker run -d --name urbanev_test --pull=never -v $(pwd):/opt/matsim/data/input:ro -v $(pwd)/output:/opt/matsim/data/output urbanev_test

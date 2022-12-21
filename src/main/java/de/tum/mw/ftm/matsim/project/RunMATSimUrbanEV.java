@@ -42,57 +42,75 @@ public class RunMATSimUrbanEV {
 
 		// Read program args
 		String configPath = "";
-		int initIterations = 0;
-		int initIterationRepetitions = 0;
 
-		if (args != null && args.length == 3) {
-			configPath = args[0];
-			initIterations = Integer.parseInt(args[1]);
-			initIterationRepetitions = Integer.parseInt(args[2]);
-		} else if (args != null && args.length == 2){
-			configPath = args[0];
-			initIterations = Integer.parseInt(args[1]);
-			initIterationRepetitions = 0;
-		} else if (args != null && args.length == 1){
-			configPath = args[0];
-			initIterations = 0;
-			initIterationRepetitions = 0;
+		// Check, if MATSim runs inside container and determine config file path
+        String inputPath = Environment.getMatsimInputPath();
+        String outputPath = Environment.getMatsimOutputPath();
+        String matsimVersion = Environment.getMatsimVersion();
+		
+		if (inputPath != null) {
+
+			log.info("Starting MATSim in Docker container." + matsimVersion);
+			configPath = String.format("%s/%s", inputPath, "config.xml");
 		}
-		else{
-			System.out.println("Config file missing. Please supply a config file path as a program argument.");
-			throw new IOException("Could not start simulation. Config file missing.");
+        else 
+		{
+			// Not running in a docker container. Retrieve config file from program args
+			if (args != null && args.length == 1){
+				configPath = args[0];
+			}
+			else{
+				System.out.println("Config file missing. Please supply a config file path as a program argument.");
+				throw new IOException("Could not start simulation. Config file missing.");
+			}
+
 		}
+
+		// Prepare configs and output path
+		ConfigGroup[] configGroups = new ConfigGroup[]{new EvConfigGroup(), new UrbanEVConfigGroup()};
+		Config config = ConfigUtils.loadConfig(configPath, configGroups);
+		Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
+		UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
+
+		if (outputPath != null){
+			// If this is running within a docker container...
+			// .. correct the output directory accordingly
+			config.controler().setOutputDirectory(outputPath);
+			initConfig.controler().setOutputDirectory(outputPath);
+		}
+
+		// Determine number of initializations
+		int initIterations = urbanEVConfigGroup.getInitializationIterations();
+		int initRepetitions = urbanEVConfigGroup.getInitializationRepetitions();
 
 		// Inform user
 		log.info("Config file path: " + configPath);
 		log.info("Number of iterations to initialize SOC distribution: " + initIterations);
-
-		// Prepare configs
-		ConfigGroup[] configGroups = new ConfigGroup[]{new EvConfigGroup(), new UrbanEVConfigGroup()};
-		Config config = ConfigUtils.loadConfig(configPath, configGroups);
+		log.info("Repetitions of the initialization procedure: " + initRepetitions);
 
 		if (initIterations > 0) {
 			
 			// Configure initialization
-			Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
 			initConfig.controler().setLastIteration(initIterations);
 			String baseOutputDirectory = initConfig.controler().getOutputDirectory();
 			StrategyConfigGroup strategyConfigGroup = (StrategyConfigGroup) initConfig.getModules().get("strategy");
 			
 			// Make sure that innovation is not disabled during initialization
-			strategyConfigGroup.setFractionOfIterationsToDisableInnovation(1.0);
+			strategyConfigGroup.setFractionOfIterationsToDisableInnovation(1.1);
 			
 			// If initialization iterations are needed
-			for(int repetition = 0; repetition <= initIterationRepetitions; repetition++)
+			for(int repetition = 0; repetition <= initRepetitions; repetition++)
 			{
+				// Construct init specific output dir
 				String outputDirectory = baseOutputDirectory + "/init" + Integer.toString(repetition);
 				initConfig.controler().setOutputDirectory(outputDirectory);
+				
+				// Run simulation
 				loadConfigAndRun(initConfig);
 
 				// use new vehicles file for next initialization
 				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
 				PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
-				UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) initConfig.getModules().get("urban_ev");
 				
 				// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
 				urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
@@ -106,9 +124,8 @@ public class RunMATSimUrbanEV {
 			// use new vehicles file and plans for training
 			EvConfigGroup evConfigGroup = (EvConfigGroup) config.getModules().get("ev");
 			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) config.getModules().get("plans");
-			UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
-			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_evehicles.xml");
-			plansConfigGroup.setInputFile("output/init" + Integer.toString(initIterationRepetitions) + "/output_plans.xml.gz");
+			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initRepetitions) + "/output_evehicles.xml");
+			plansConfigGroup.setInputFile("output/init" + Integer.toString(initRepetitions) + "/output_plans.xml.gz");
 
 			// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
 			urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
@@ -165,7 +182,11 @@ public class RunMATSimUrbanEV {
 		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=rangeAnxiety will be added to a special replanning subpopulation that will be replanned in any case
 		Population population = controler.getScenario().getPopulation();
 		population.getPersons().entrySet().forEach(entry->{entry.getValue().getAttributes().putAttribute("subpopulation", "nonCriticalSOC");});
+		long start = System.currentTimeMillis();
 
 		controler.run();
+		long finish = System.currentTimeMillis();
+		long timeElapsed = finish - start;
+		System.out.println(timeElapsed);
 	}
 }

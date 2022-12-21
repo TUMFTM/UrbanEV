@@ -2,6 +2,7 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.config;
 
 
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup.StringGetter;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
@@ -69,6 +70,21 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
     static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
 
+    public static final String DELETE_ITERATIONS_ON_THE_FLY = "deleteIterationsOnTheFly";
+    static final String DELETE_ITERATIONS_ON_THE_FLY_EXP = "[boolean] If set to true, delete iterations to save disk space. Behavior can further be specified using parameters 'forceKeepNthIteration' and 'keepIterationsModulo'. The first and last iteration will be kept in any case.";
+
+    public static final String FORCE_KEEP_NTH_ITERATION = "forceKeepNthIteration";
+    static final String FORCE_KEEP_NTH_ITERATION_EXP = "[boolean] Only applies if 'deleteIterationsOnTheFly' is enabled. Then, if set to true, 'keepIterationsModulo' takes effect to retain the nth-iteration folder. 'keepIterationsModulo' defaults to 10 (e.g. iterations 0,10,20,..., N are kept).";
+
+    public static final String KEEP_ITERATIONS_MODULO = "keepIterationsModulo";
+    static final String KEEP_ITERATIONS_MODULO_EXP = "[integer] Only applies if 'deleteIterationsOnTheFly' and 'forceKeepNthIteration' are enabled. The, 'keepIterationsModulo' determines which interation folders are kept in addition to the first and last iteration (e.g. if keepIterationsModulo = 10: iterations 0,10,20,..., N are kept). Defaults to 10.";
+
+    public static final String INITIALIZATION_ITERATIONS = "initializationIterations";
+    static final String INITIALIZATION_ITERATIONS_EXP = "[integer] Number of initialization iterations to setup socs and get the simulation starting. After the specified number of iterations concludes, the initialization outputs are used to start the actual simiulation (or trigger another initialization run based on the value of 'initializationRepetitions').";
+
+    public static final String INITIALIZATION_REPETITIONS = "initializationRepetitions";
+    static final String INITIALIZATION_REPETITIONS_EXP = "[integer] Number of repetitions of the initialization routine.";
+
     // Charger parameters
     private boolean generateHomeChargersByPercentage = false;
 
@@ -130,6 +146,22 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @PositiveOrZero
     private int maxTimeFlexibility = 600;
 
+    // Iteration cleanup parameters
+    @NotNull
+    private boolean deleteIterationsOnTheFly = false;
+
+    @NotNull
+    private boolean forceKeepNthIteration = false;
+
+    @Positive
+    private int keepIterationsModulo = 10;
+
+    // Initialization setup
+    @PositiveOrZero
+    private int initializationIterations = 0;
+
+    @PositiveOrZero
+    private int initializationRepetitions = 0;
 
     public UrbanEVConfigGroup() {
         super(GROUP_NAME);
@@ -157,6 +189,11 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(DEFAULT_WORK_CHARGER_POWER, DEFAULT_WORK_CHARGER_POWER_EXP);
         map.put(OPPORTUNITY_CHARGING_SHARE, OPPORTUNITY_CHARGING_SHARE_EXP);
         map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
+        map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
+        map.put(FORCE_KEEP_NTH_ITERATION, FORCE_KEEP_NTH_ITERATION_EXP);
+        map.put(KEEP_ITERATIONS_MODULO, KEEP_ITERATIONS_MODULO_EXP);
+        map.put(INITIALIZATION_ITERATIONS, INITIALIZATION_ITERATIONS_EXP);
+        map.put(INITIALIZATION_REPETITIONS, INITIALIZATION_REPETITIONS_EXP);
         return map;
     }
 
@@ -332,6 +369,56 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(FAILED_OPPORTUNITY_CHARGING_UTILITY)
     public void setFailedOpportunityChargingUtility(double failedOpportunityChargingUtility) {
         this.failedOpportunityChargingUtility = failedOpportunityChargingUtility;
+    }
+
+    @StringGetter(DELETE_ITERATIONS_ON_THE_FLY)
+    public boolean isDeleteIterationsOnTheFly() {
+        return deleteIterationsOnTheFly;
+    }
+
+    @StringSetter(DELETE_ITERATIONS_ON_THE_FLY)
+    public void setDeleteIterationsOnTheFly(boolean deleteIterationsOnTheFly) {
+        this.deleteIterationsOnTheFly = deleteIterationsOnTheFly;
+    }
+
+    @StringGetter(FORCE_KEEP_NTH_ITERATION)
+    public boolean isForceKeepNthIteration() {
+        return forceKeepNthIteration;
+    }
+
+    @StringSetter(FORCE_KEEP_NTH_ITERATION)
+    public void setForceKeepNthIteration(boolean forceKeepNthIteration) {
+        this.forceKeepNthIteration = forceKeepNthIteration;
+    }
+
+    @StringGetter(KEEP_ITERATIONS_MODULO)
+    public int getKeepIterationsModulo() {
+        return keepIterationsModulo;
+    }
+
+    @StringSetter(KEEP_ITERATIONS_MODULO)
+    public void setkeepIterationsModulo(int keepIterationsModulo) {
+        this.keepIterationsModulo = keepIterationsModulo;
+    }
+
+    @StringGetter(INITIALIZATION_ITERATIONS)
+    public int getInitializationIterations() {
+        return initializationIterations;
+    }
+
+    @StringSetter(INITIALIZATION_ITERATIONS)
+    public void setInitializationIterations(int initializationIterations) {
+        this.initializationIterations = initializationIterations;
+    }
+
+    @StringGetter(INITIALIZATION_REPETITIONS)
+    public int getInitializationRepetitions() {
+        return initializationRepetitions;
+    }
+
+    @StringSetter(INITIALIZATION_REPETITIONS)
+    public void setInitializationRepetitions(int initializationRepetitions) {
+        this.initializationRepetitions = initializationRepetitions;
     }
 
 }
