@@ -174,7 +174,7 @@ public class RunMATSimUrbanEV {
 			public ScoringFunction createNewScoringFunction(Person person) {
 				ChargingBehaviourScoringParameters chargingBehaviourScoringParameters = new ChargingBehaviourScoringParameters.Builder(scenario).build();
 				SumScoringFunction sumScoringFunction = new SumScoringFunction();
-				sumScoringFunction.addScoringFunction(new ChargingBehaviourScoring(chargingBehaviourScoringParameters, person));
+				sumScoringFunction.addScoringFunction(new ChargingBehaviourScoring(chargingBehaviourScoringParameters, person, (UrbanEVConfigGroup) config.getModules().get("urban_ev")));
 				return sumScoringFunction;
 			}
 		});

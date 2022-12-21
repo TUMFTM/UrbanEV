@@ -2,6 +2,7 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.scoring;
 
 import com.google.inject.Inject;
 
+import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
 
@@ -36,13 +37,14 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private final Id<Person> personId;
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
+    private final UrbanEVConfigGroup urbanEVConfig;
     
 
     final ChargingBehaviourScoringParameters params;
     Person person;
 
     @Inject
-    public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person) {
+    public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person, UrbanEVConfigGroup urbanEVConfig) {
         this.params = params;
         this.person = person;
         String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
@@ -50,6 +52,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
         this.hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
         this.personId =  person.getId();
+        this.urbanEVConfig = urbanEVConfig;
     }
 
     @Override
@@ -117,11 +120,16 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             // Scoring of charging transactions
             if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
             {
-                double delta_score = 0.0;
+                
                 double pluggedDuration = chargingBehaviourScoringEvent.getPluggedDuration();
-                // Todo: Add ChargingBehaviorScoresCollector entries
-                if(pluggedDuration>)
-                score+= delta_score
+                
+                if(pluggedDuration>urbanEVConfig.getStationHoggingThresholdMinutes()*60){
+                    double delta_score = params.marginalUtilityOfStationHogging;
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.STATION_HOGGING, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.STATION_HOGGING, personId);
+                    score += delta_score;
+                }
+                    
             }
             
             // Scoring on last activity
