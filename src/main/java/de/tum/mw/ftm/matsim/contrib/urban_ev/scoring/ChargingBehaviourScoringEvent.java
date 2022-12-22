@@ -21,8 +21,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
     private Double walkingDistance;
     private String activityType;
     private Double startSoc;
-    private Double chargingDuration;
     private Double pluggedDuration;
+    private boolean hogging; 
     private ScoreTrigger scoreTrigger;
 
     public ChargingBehaviourScoringEvent(
@@ -32,8 +32,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         Double soc,
         Double startSoc,
         Double walkingDistance,
-        Double chargingDuration,
         Double pluggedDuration, 
+        Boolean hogging,
         ScoreTrigger scoreTrigger        
         ) 
     {
@@ -43,8 +43,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         this.soc = soc;
         this.startSoc = startSoc;
         this.walkingDistance = walkingDistance;
-        this.chargingDuration = chargingDuration;
         this.pluggedDuration = pluggedDuration;
+        this.hogging = hogging;
         this.scoreTrigger = scoreTrigger;
     }
 
@@ -61,10 +61,10 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
     public Double getStartSoc() { return startSoc; }
 
     public Double getWalkingDistance() { return walkingDistance; }
-
-    public Double getChargingDuration() { return chargingDuration; }
     
     public Double getPluggedDuration() { return pluggedDuration; }
+
+    public boolean isHogging() { return hogging; }
 
     public ScoreTrigger getScoreTrigger() { return scoreTrigger; }
 
@@ -77,8 +77,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         attributes.put("soc", getSoc().toString());
         attributes.put("startSoc", getStartSoc().toString());
         attributes.put("walkingDistance", getWalkingDistance().toString());
-        attributes.put("chargingDuration", getChargingDuration().toString());
         attributes.put("pluggedDuration", getPluggedDuration().toString());
+        attributes.put("hogging", Boolean.toString(isHogging()));
         attributes.put("scoreTrigger", getScoreTrigger().name());
 
         return attributes;

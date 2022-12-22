@@ -2,7 +2,6 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.scoring;
 
 import com.google.inject.Inject;
 
-import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
 
@@ -37,22 +36,22 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private final Id<Person> personId;
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
-    private final UrbanEVConfigGroup urbanEVConfig;
+    private final boolean hasChargerAtWork;
     
 
     final ChargingBehaviourScoringParameters params;
     Person person;
 
     @Inject
-    public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person, UrbanEVConfigGroup urbanEVConfig) {
+    public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person) {
         this.params = params;
         this.person = person;
         String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
         this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
         this.rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
         this.hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
+        this.hasChargerAtWork = person.getAttributes().getAttribute("workChargerPower") != null;
         this.personId =  person.getId();
-        this.urbanEVConfig = urbanEVConfig;
     }
 
     @Override
@@ -117,15 +116,13 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             }
 
 
-            // Scoring of charging transactions
+            // Scoring of charging hogging
             if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
             {
-                
-                double pluggedDuration = chargingBehaviourScoringEvent.getPluggedDuration();
-                
+                                
                 if(
-                    pluggedDuration>urbanEVConfig.getStationHoggingThresholdMinutes()*60 && // If the vehicle is plugged for an excessive duration
-                    !(activityType.contains("home") || (activityType.contains("work") && !activityType.contains("work_related"))) // and charging was performed publicly
+                    chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
+                    !((activityType.contains("home") && hasChargerAtHome) || ((activityType.contains("work") && !activityType.contains("work_related")) && hasChargerAtWork)) // and charging was performed publicly
                     ) 
                 {
                     double delta_score = params.marginalUtilityOfStationHogging;

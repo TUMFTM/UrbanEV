@@ -224,7 +224,7 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						"opportunityChargingScoringPersons",
 						"meanOpportunityChargingScore",
 						"stationHoggingScoringPersons",
-						"meanStationHoggingScore"
+						"sumStationHoggingScore"
 				));
 			} else {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.APPEND), CSVFormat.DEFAULT.withDelimiter(';'));
@@ -251,7 +251,7 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 	// number of persons scoring OPPORTUNITY_CHARGING
 					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 							// mean OPPORTUNITY_CHARGING
 					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 	// number of persons scoring STATION_HOGGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)) 							// mean STATION_HOGGING					
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)) 							// sum STATION_HOGGING					
 			);
 
 

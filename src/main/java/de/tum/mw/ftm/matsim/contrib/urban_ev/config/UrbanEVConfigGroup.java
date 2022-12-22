@@ -41,6 +41,12 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String STATION_HOGGING_UTILITY = "stationHoggingUtility";
     static final String STATION_HOGGING_UTILITY_EXP = "[utils] utility of excessive charging, usually negative";
 
+    public static final String HOGGING_EXEMPTION_HOUR_START = "hoggingExemptionHourStart";
+    static final String HOGGING_EXEMPTION_HOUR_START_EXP = "[double - hour] the time from which on excessive plugged durations are tolerated. Example: 20.5 -> From 20:30:00 onwards, hogging is acceptable.";
+
+    public static final String HOGGING_EXEMPTION_HOUR_STOP = "hoggingExemptionHourStop";
+    static final String HOGGING_EXEMPTION_HOUR_STOP_EXP = "[double - hour] the time from which on excessive plugged durations are not tolerated anymore. Example: 8.5 -> From 08:30:00 onwards, hogging is not acceptable.";
+
     public static final String HOGGING_THRESHOLD_MINUTES = "hoggingThresholdMinutes";
     static final String HOGGING_THRESHOLD_MINUTES_EXP = "[min] the number of minutes after which a plugged duration is considered as punishable station hogging.";
 
@@ -150,6 +156,10 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private double stationHoggingThresholdMinutes = 4*60.0;
 
+    @Positive
+    private double hoggingExemptionHourStart = 20.0;
+    private double hoggingExemptionHourStop = 8.0;
+
     // Charging parameters
     @Positive
     private int parkingSearchRadius = 500;
@@ -218,6 +228,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(INITIALIZATION_REPETITIONS, INITIALIZATION_REPETITIONS_EXP);
         map.put(STATION_HOGGING_UTILITY, STATION_HOGGING_UTILITY_EXP);
         map.put(HOGGING_THRESHOLD_MINUTES, HOGGING_THRESHOLD_MINUTES_EXP);
+        map.put(HOGGING_EXEMPTION_HOUR_START, HOGGING_EXEMPTION_HOUR_START_EXP);
+        map.put(HOGGING_EXEMPTION_HOUR_STOP, HOGGING_EXEMPTION_HOUR_STOP_EXP);
         return map;
     }
 
@@ -410,6 +422,22 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @StringGetter(HOGGING_THRESHOLD_MINUTES)
     public double getStationHoggingThresholdMinutes(){ return stationHoggingThresholdMinutes; }
+
+    @StringSetter(HOGGING_EXEMPTION_HOUR_START)
+    public void setHoggingExemptionHourStart(double hoggingExemptionHourStart) {
+        this.hoggingExemptionHourStart = hoggingExemptionHourStart;
+    }
+
+    @StringGetter(HOGGING_EXEMPTION_HOUR_START)
+    public double getHoggingExemptionHourStart(){ return hoggingExemptionHourStart; }
+
+    @StringSetter(HOGGING_EXEMPTION_HOUR_STOP)
+    public void setHoggingExemptionHourStop(double hoggingExemptionHourStop) {
+        this.hoggingExemptionHourStop = hoggingExemptionHourStop;
+    }
+
+    @StringGetter(HOGGING_EXEMPTION_HOUR_STOP)
+    public double getHoggingExemptionHourStop(){ return hoggingExemptionHourStop; }
 
     @StringGetter(DELETE_ITERATIONS_ON_THE_FLY)
     public boolean isDeleteIterationsOnTheFly() {
