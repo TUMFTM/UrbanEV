@@ -130,4 +130,8 @@ public class ChargingLogicImpl implements ChargingLogic {
 	public ChargingStrategy getChargingStrategy() {
 		return chargingStrategy;
 	}
+
+	public Map<Id<ElectricVehicle>, Double> getPlugInTimestamps(){
+		return plugInTimestamps;
+	}
 }

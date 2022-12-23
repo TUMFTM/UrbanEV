@@ -2,7 +2,6 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.config;
 
 
 import org.matsim.core.config.ReflectiveConfigGroup;
-import org.matsim.core.config.ReflectiveConfigGroup.StringGetter;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
@@ -12,6 +11,8 @@ import java.util.Map;
 public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     public static final String GROUP_NAME = "urban_ev";
+
+    // Scoring
 
     private static final String RANGE_ANXIETY_UTILITY = "rangeAnxietyUtility";
     static final String RANGE_ANXIETY_UTILITY_EXP = "[utils/percent_points_of_soc_under_threshold] utility for going below battery threshold. negative";
@@ -28,23 +29,46 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     private static final String SOC_DIFFERENCE_UTILITY = "socDifferenceUtility";
     static final String SOC_DIFFERENCE_UTILITY_EXP = "[utils] utility for difference between start and end soc";
 
-    public static final String VEHICLE_TYPES_FILE = "vehicleTypesFile";
-    static final String VEHICLE_TYPES_FILE_EXP = "Location of the vehicle types file";
-
     public static final String DEFAULT_RANGE_ANXIETY_THRESHOLD = "defaultRangeAnxietyThreshold";
     static final String DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP = "Default threshold for scoring. Set person attribute to overwrite. [% soc]";
 
+    public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
+    static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
+
+    public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
+    static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
+
+    public static final String STATION_HOGGING_UTILITY = "stationHoggingUtility";
+    static final String STATION_HOGGING_UTILITY_EXP = "[utils] utility of excessive charging, usually negative";
+
+    public static final String HOGGING_EXEMPTION_HOUR_START = "hoggingExemptionHourStart";
+    static final String HOGGING_EXEMPTION_HOUR_START_EXP = "[double - hour] the time from which on excessive plugged durations are tolerated. Example: 20.5 -> From 20:30:00 onwards, hogging is acceptable.";
+
+    public static final String HOGGING_EXEMPTION_HOUR_STOP = "hoggingExemptionHourStop";
+    static final String HOGGING_EXEMPTION_HOUR_STOP_EXP = "[double - hour] the time from which on excessive plugged durations are not tolerated anymore. Example: 8.5 -> From 08:30:00 onwards, hogging is not acceptable.";
+
+    public static final String HOGGING_THRESHOLD_MINUTES = "hoggingThresholdMinutes";
+    static final String HOGGING_THRESHOLD_MINUTES_EXP = "[min] the number of minutes after which a plugged duration is considered as punishable station hogging.";
+
+    // DataIO
+
+    public static final String VEHICLE_TYPES_FILE = "vehicleTypesFile";
+    static final String VEHICLE_TYPES_FILE_EXP = "Location of the vehicle types file";
+
+    public static final String DELETE_ITERATIONS_ON_THE_FLY = "deleteIterationsOnTheFly";
+    static final String DELETE_ITERATIONS_ON_THE_FLY_EXP = "[boolean] If set to true, delete iterations to save disk space. Behavior can further be specified using parameters 'forceKeepNthIteration' and 'keepIterationsModulo'. The first and last iteration will be kept in any case.";
+
+    public static final String FORCE_KEEP_NTH_ITERATION = "forceKeepNthIteration";
+    static final String FORCE_KEEP_NTH_ITERATION_EXP = "[boolean] Only applies if 'deleteIterationsOnTheFly' is enabled. Then, if set to true, 'keepIterationsModulo' takes effect to retain the nth-iteration folder. 'keepIterationsModulo' defaults to 10 (e.g. iterations 0,10,20,..., N are kept).";
+
+    public static final String KEEP_ITERATIONS_MODULO = "keepIterationsModulo";
+    static final String KEEP_ITERATIONS_MODULO_EXP = "[integer] Only applies if 'deleteIterationsOnTheFly' and 'forceKeepNthIteration' are enabled. The, 'keepIterationsModulo' determines which interation folders are kept in addition to the first and last iteration (e.g. if keepIterationsModulo = 10: iterations 0,10,20,..., N are kept). Defaults to 10.";
+
+
+    // General Options
+
     public static final String PARKING_SEARCH_RADIUS = "parkingSearchRadius";
     static final String PARKING_SEARCH_RADIUS_EXP = "Radius around activity location in which agents looks for available chargers [m]";
-
-    public static final String MAXNUMBERSIMULTANEOUSPLANCHANGES = "maxNumberSimultaneousPlanChanges";
-    static final String MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP = "The maximum number of changes to a persons charging plan that are introduced in one replanning step.";
-
-    public static final String TIMEADJUSTMENTPROBABILITY = "timeAdjustmentProbability";
-    static final String TIMEADJUSTMENTPROBABILITY_EXP = "The probability with which a persons decides to adjust their activity end times in order to increase their chances for a free charging spot at their next activity.";
-
-    public static final String MAXTIMEFLEXIBILITY = "maxTimeFlexibility";
-    static final String MAXTIMEFLEXIBILITY_EXP = "The maximum time span a person is willing to adjust their activity end times in order to increase their chances for a free charging spot at their next activity [s].";
 
     public static final String GENERATE_HOME_CHARGERS_BY_PERCENTAGE = "generateHomeChargersByPercentage";
     static final String GENERATE_HOME_CHARGERS_BY_PERCENTAGE_EXP = "If set to true, home charger information from the population file will be ignored. Instead home chargers will be generated randomly given the homeChargerPercentage share. [true/false]";
@@ -64,21 +88,19 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String DEFAULT_WORK_CHARGER_POWER = "defaultWorkChargerPower";
     static final String DEFAULT_WORK_CHARGER_POWER_EXP = "The power of work chargers if generateWorkChargersByPercentage is set to true [kW].";
 
-    public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
-    static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
+    // Replanning
 
-    public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
-    static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
+    public static final String MAXNUMBERSIMULTANEOUSPLANCHANGES = "maxNumberSimultaneousPlanChanges";
+    static final String MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP = "The maximum number of changes to a persons charging plan that are introduced in one replanning step.";
 
-    public static final String DELETE_ITERATIONS_ON_THE_FLY = "deleteIterationsOnTheFly";
-    static final String DELETE_ITERATIONS_ON_THE_FLY_EXP = "[boolean] If set to true, delete iterations to save disk space. Behavior can further be specified using parameters 'forceKeepNthIteration' and 'keepIterationsModulo'. The first and last iteration will be kept in any case.";
+    public static final String TIMEADJUSTMENTPROBABILITY = "timeAdjustmentProbability";
+    static final String TIMEADJUSTMENTPROBABILITY_EXP = "The probability with which a persons decides to adjust their activity end times in order to increase their chances for a free charging spot at their next activity.";
 
-    public static final String FORCE_KEEP_NTH_ITERATION = "forceKeepNthIteration";
-    static final String FORCE_KEEP_NTH_ITERATION_EXP = "[boolean] Only applies if 'deleteIterationsOnTheFly' is enabled. Then, if set to true, 'keepIterationsModulo' takes effect to retain the nth-iteration folder. 'keepIterationsModulo' defaults to 10 (e.g. iterations 0,10,20,..., N are kept).";
+    public static final String MAXTIMEFLEXIBILITY = "maxTimeFlexibility";
+    static final String MAXTIMEFLEXIBILITY_EXP = "The maximum time span a person is willing to adjust their activity end times in order to increase their chances for a free charging spot at their next activity [s].";    
 
-    public static final String KEEP_ITERATIONS_MODULO = "keepIterationsModulo";
-    static final String KEEP_ITERATIONS_MODULO_EXP = "[integer] Only applies if 'deleteIterationsOnTheFly' and 'forceKeepNthIteration' are enabled. The, 'keepIterationsModulo' determines which interation folders are kept in addition to the first and last iteration (e.g. if keepIterationsModulo = 10: iterations 0,10,20,..., N are kept). Defaults to 10.";
-
+    // Initialization
+    
     public static final String INITIALIZATION_ITERATIONS = "initializationIterations";
     static final String INITIALIZATION_ITERATIONS_EXP = "[integer] Number of initialization iterations to setup socs and get the simulation starting. After the specified number of iterations concludes, the initialization outputs are used to start the actual simiulation (or trigger another initialization run based on the value of 'initializationRepetitions').";
 
@@ -128,6 +150,16 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @NotNull
     private String vehicleTypesFile = null;
 
+    @NotNull
+    private double stationHoggingUtility = -3;
+
+    @Positive
+    private double stationHoggingThresholdMinutes = 4*60.0;
+
+    @Positive
+    private double hoggingExemptionHourStart = 20.0;
+    private double hoggingExemptionHourStop = 8.0;
+
     // Charging parameters
     @Positive
     private int parkingSearchRadius = 500;
@@ -135,7 +167,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private double opportunityChargingShare = 0.02;
 
-    // Replanning parameters
+    // Replanning
 
     @Positive
     private int maxNumberSimultaneousPlanChanges = 2;
@@ -146,7 +178,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @PositiveOrZero
     private int maxTimeFlexibility = 600;
 
-    // Iteration cleanup parameters
+    // DataIO
     @NotNull
     private boolean deleteIterationsOnTheFly = false;
 
@@ -156,7 +188,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private int keepIterationsModulo = 10;
 
-    // Initialization setup
+    // Initialization
     @PositiveOrZero
     private int initializationIterations = 0;
 
@@ -194,6 +226,10 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(KEEP_ITERATIONS_MODULO, KEEP_ITERATIONS_MODULO_EXP);
         map.put(INITIALIZATION_ITERATIONS, INITIALIZATION_ITERATIONS_EXP);
         map.put(INITIALIZATION_REPETITIONS, INITIALIZATION_REPETITIONS_EXP);
+        map.put(STATION_HOGGING_UTILITY, STATION_HOGGING_UTILITY_EXP);
+        map.put(HOGGING_THRESHOLD_MINUTES, HOGGING_THRESHOLD_MINUTES_EXP);
+        map.put(HOGGING_EXEMPTION_HOUR_START, HOGGING_EXEMPTION_HOUR_START_EXP);
+        map.put(HOGGING_EXEMPTION_HOUR_STOP, HOGGING_EXEMPTION_HOUR_STOP_EXP);
         return map;
     }
 
@@ -370,6 +406,38 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public void setFailedOpportunityChargingUtility(double failedOpportunityChargingUtility) {
         this.failedOpportunityChargingUtility = failedOpportunityChargingUtility;
     }
+
+    @StringSetter(STATION_HOGGING_UTILITY)
+    public void setStationHoggingUtility(double stationHoggingUtility) {
+        this.stationHoggingUtility = stationHoggingUtility;
+    }
+
+    @StringGetter(STATION_HOGGING_UTILITY)
+    public double getStationHoggingUtility(){ return stationHoggingUtility; }
+
+    @StringSetter(HOGGING_THRESHOLD_MINUTES)
+    public void setStationHoggingThresholdMinutes(double stationHoggingThresholdMinutes) {
+        this.stationHoggingThresholdMinutes = stationHoggingThresholdMinutes;
+    }
+
+    @StringGetter(HOGGING_THRESHOLD_MINUTES)
+    public double getStationHoggingThresholdMinutes(){ return stationHoggingThresholdMinutes; }
+
+    @StringSetter(HOGGING_EXEMPTION_HOUR_START)
+    public void setHoggingExemptionHourStart(double hoggingExemptionHourStart) {
+        this.hoggingExemptionHourStart = hoggingExemptionHourStart;
+    }
+
+    @StringGetter(HOGGING_EXEMPTION_HOUR_START)
+    public double getHoggingExemptionHourStart(){ return hoggingExemptionHourStart; }
+
+    @StringSetter(HOGGING_EXEMPTION_HOUR_STOP)
+    public void setHoggingExemptionHourStop(double hoggingExemptionHourStop) {
+        this.hoggingExemptionHourStop = hoggingExemptionHourStop;
+    }
+
+    @StringGetter(HOGGING_EXEMPTION_HOUR_STOP)
+    public double getHoggingExemptionHourStop(){ return hoggingExemptionHourStop; }
 
     @StringGetter(DELETE_ITERATIONS_ON_THE_FLY)
     public boolean isDeleteIterationsOnTheFly() {

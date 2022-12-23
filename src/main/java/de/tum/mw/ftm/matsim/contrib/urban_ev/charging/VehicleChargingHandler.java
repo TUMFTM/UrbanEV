@@ -40,6 +40,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.ChargingInfrastructure;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -61,6 +62,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.vehicles.Vehicle;
 
 import javax.inject.Inject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,11 +70,14 @@ import java.util.Map;
 
 public class VehicleChargingHandler
 		implements ActivityStartEventHandler, ActivityEndEventHandler, PersonLeavesVehicleEventHandler,
-		ChargingEndEventHandler, MobsimScopeEventHandler {
+		MobsimScopeEventHandler {
 
 	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
 
 	public static final String CHARGING_IDENTIFIER = " charging";
+	public static final Integer SECONDS_PER_MINUTE = 60;
+	public static final Integer SECONDS_PER_HOUR = 60*SECONDS_PER_MINUTE;
+	public static final Integer SECONDS_PER_DAY = 24*SECONDS_PER_HOUR;
 	private Map<Id<Person>, Id<Vehicle>> lastVehicleUsed = new HashMap<>();
 	private Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = new HashMap<>();
 
@@ -81,7 +86,9 @@ public class VehicleChargingHandler
 	private final ElectricFleet electricFleet;
 	private final Population population;
 	private final int parkingSearchRadius;
-
+	private final double hoggingExemptionHourStart;
+	private final double hoggingExemptionHourStop;
+	private final double hoggingThresholdMinutes;
 	private final EventsManager eventsManager;
 
 	@Inject
@@ -98,25 +105,35 @@ public class VehicleChargingHandler
 		this.population = population;
 		this.eventsManager = eventsManager;
 		this.parkingSearchRadius = urbanEVCfg.getParkingSearchRadius();
+		this.hoggingExemptionHourStart = urbanEVCfg.getHoggingExemptionHourStart();
+		this.hoggingExemptionHourStop = urbanEVCfg.getHoggingExemptionHourStop();
+		this.hoggingThresholdMinutes = urbanEVCfg.getStationHoggingThresholdMinutes();
 		events.addMobsimScopeHandler(this);
 	}
 
 	@Override
 	public void handleEvent(ActivityStartEvent event) {
+
 		String actType = event.getActType();
 		Id<Person> personId = event.getPersonId();
 		Id<Vehicle> vehicleId = lastVehicleUsed.get(personId);
+
 		if (vehicleId != null) {
+
 			Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
+
 			if (electricFleet.getElectricVehicles().containsKey(evId)) {
+				
 				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
 				Person person = population.getPersons().get(personId);
 				double walkingDistance = 0.0;
 
 				if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
+					
 					Activity activity = getActivity(person, event.getTime());
 					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 					Charger selectedCharger = findBestCharger(activityCoord, ev);
+					
 					if (selectedCharger != null) { // if charger was found, start charging
 						selectedCharger.getLogic().addVehicle(ev, event.getTime());
 						vehiclesAtChargers.put(evId, selectedCharger.getId());
@@ -132,24 +149,82 @@ public class VehicleChargingHandler
 				}
 
 				double time = event.getTime();
-				double soc = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+				double socUponArrival = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
-				// if (soc <= 0) { log.error("EV " + ev.getId().toString() + " has empty battery."); }
-				eventsManager.processEvent(new ChargingBehaviourScoringEvent(time, personId, soc,
-						walkingDistance, actType, startSoc));
+
+				// Issue a charging behaviour scoring event
+				// Needed to score walking and catch empty or low soc after driving
+				eventsManager.processEvent(new ChargingBehaviourScoringEvent(
+					time,
+					personId,
+					actType,
+					socUponArrival,
+					startSoc,
+					walkingDistance,
+					0.0,
+					false,
+					ScoreTrigger.ACTIVITYSTART
+					)
+					);
 			}
 		}
 	}
 
 	@Override
 	public void handleEvent(ActivityEndEvent event) {
-		if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
-			Id<Vehicle> vehicleId = lastVehicleUsed.get(event.getPersonId());
+
+		String actType = event.getActType();
+		
+		// If the last activity included charging
+		if (actType.endsWith(CHARGING_IDENTIFIER)) {
+
+			Id<Person> personId = event.getPersonId();
+			Id<Vehicle> vehicleId = lastVehicleUsed.get(personId);
+
+			// If the vehicle is currently plugged in
 			if(vehiclesAtChargers.containsKey(vehicleId))
 			{
+				Person person = population.getPersons().get(personId);
+				Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
+				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
+
+				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
+				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
+				Activity activity = getActivity(person, event.getTime());
+				Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
+
+				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
+				double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
+
 				unplugVehicle(vehicleId, event.getTime());
+
+				double time = event.getTime();
+				double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
+				double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
+				double pluggedDuration = event.getTime()-plugInTS;
+				
+				// Determine whether hogging is an issue
+				Boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
+
+				// Issue a charging behaviour scoring event
+				// Needed to score the charging process itself 
+				eventsManager.processEvent(
+					new ChargingBehaviourScoringEvent(
+						time,
+						personId,
+						actType,
+						socUponDeparture,
+						startSoc,
+						walkingDistance,
+						pluggedDuration,
+						hogging,
+						ScoreTrigger.ACTIVITYEND
+						)
+					);
 			}
 		}
+
 	}
 
 	@Override
@@ -157,11 +232,11 @@ public class VehicleChargingHandler
 		lastVehicleUsed.put(event.getPersonId(), event.getVehicleId());
 	}
 
-	@Override
-	public void handleEvent(ChargingEndEvent event) {
-		// vehiclesAtChargers.remove(event.getVehicleId());
-		// Charging has ended before activity ends
-	}
+	// @Override
+	// public void handleEvent(ChargingEndEvent event) {
+	//	// vehiclesAtChargers.remove(event.getVehicleId());
+	//	// Charging has ended before activity ends
+	// }
 
 	/**
 	 * gets ativity from agent's plan by looking for current time
@@ -177,7 +252,7 @@ public class VehicleChargingHandler
 			if (planElement instanceof Activity) {
 				if (((Activity) planElement).getEndTime().isDefined()) {
 					double activityEndTime = ((Activity) planElement).getEndTime().seconds();
-					if (activityEndTime > time || i == planElements.size() - 1) {
+					if (activityEndTime >= time || i == planElements.size() - 1) {
 						activity = ((Activity) planElement);
 						break;
 					}
@@ -245,6 +320,51 @@ public class VehicleChargingHandler
 				charger.getLogic().removeVehicle(electricFleet.getElectricVehicles().get(evId), time);
 			}
 		}
-	}		
+	}
+	
+	private double lastMidnight(double t)
+	{
+		return SECONDS_PER_DAY*((int) t/SECONDS_PER_DAY);
+	}
+
+	private double nextMidnight(double t)
+	{
+		return lastMidnight(t)+SECONDS_PER_DAY;
+	}
+
+	private boolean isHogging(double plugInTS, double plugOutTS, double hoggingExemptionHourStart, double hoggingExemptionHourStop, double hoggingThresholdMinutes)
+	{
+
+		// Normalize all non-second timestamps
+		double hoggingExemptionStart = this.hoggingExemptionHourStart*SECONDS_PER_HOUR;
+		double hoggingExemptionStop = this.hoggingExemptionHourStop*SECONDS_PER_HOUR;
+		double hoggingThreshold = this.hoggingThresholdMinutes*SECONDS_PER_MINUTE;
+
+		// Depending on the relative arrival time...
+		double arrivalWithinDay = plugInTS%SECONDS_PER_DAY;
+
+		// ... determine absolute time from which on a transaction is considered as hogging
+		double plugOutTSPenalty;
+
+		if(
+			arrivalWithinDay >= hoggingExemptionStop &&
+			arrivalWithinDay <= hoggingExemptionStart-hoggingThreshold	
+			)
+		{
+			// If the car arrived within hogging controlled time and is technically able to violate the threshold on this day
+			plugOutTSPenalty = plugInTS+hoggingThreshold; // The car needs to leave before the hoggingThreshold
+		}
+		else if (arrivalWithinDay>hoggingExemptionStart-hoggingThreshold){
+			// If the car arrived so late that it can technically not violate the threshold on the arrival day
+			plugOutTSPenalty = nextMidnight(plugInTS) + hoggingExemptionStop + hoggingThreshold; // The car needs to leave before the earliest hoggingThreshold the next day
+		}
+		else {
+			// If the car arrived before the start of the hogging controlled time -> arrivalWithinDay<hoggingExemptionStop
+			plugOutTSPenalty = lastMidnight(plugInTS)+hoggingExemptionStop+hoggingThreshold; // The car needs to leave before the earliest hoggingThreshold this day
+		}
+
+		// Check whether the vehicle was connected too long
+		return plugOutTS>plugOutTSPenalty;
+	}
 
 }

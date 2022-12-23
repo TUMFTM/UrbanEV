@@ -1,6 +1,8 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.scoring;
 
 import com.google.inject.Inject;
+
+import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
 
 import org.matsim.api.core.v01.Id;
@@ -18,7 +20,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         WALKING_DISTANCE,
         HOME_CHARGING,
         ENERGY_BALANCE, 
-        OPPORTUNITY_CHARGING
+        OPPORTUNITY_CHARGING, 
+        STATION_HOGGING
     }
 
     private double score;
@@ -33,6 +36,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private final Id<Person> personId;
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
+    private final boolean hasChargerAtWork;
     
 
     final ChargingBehaviourScoringParameters params;
@@ -46,6 +50,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
         this.rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
         this.hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
+        this.hasChargerAtWork = person.getAttributes().getAttribute("workChargerPower") != null;
         this.personId =  person.getId();
     }
 
@@ -57,11 +62,12 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
             double soc = chargingBehaviourScoringEvent.getSoc();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
+            ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
 
-            // activity independent scoring components
+            // activity independent scoring components at activity start
 
             // punish soc below threshold
-            if (soc < rangeAnxietyThreshold && soc > 0) {
+            if (scoreTrigger == ScoreTrigger.ACTIVITYSTART && soc < rangeAnxietyThreshold && soc > 0) {
                 double delta_score = params.marginalUtilityOfRangeAnxiety_soc * (rangeAnxietyThreshold - soc) / rangeAnxietyThreshold;
                 chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
                 chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
@@ -70,7 +76,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 // Add all critical agents to the criticalSOC subpopulation such that they get replanned
                 person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
                 
-            } else if (soc == 0) {
+            } else if (scoreTrigger == ScoreTrigger.ACTIVITYSTART && soc == 0) {
                 // severely punish empty battery
                 double delta_score = params.utilityOfEmptyBattery;
                 chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.EMPTY_BATTERY, delta_score);
@@ -82,8 +88,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
             }
 
-            // scoring of charging activities
-            if(activityType.contains(CHARGING_IDENTIFIER))
+            // scoring of location choices
+            if(scoreTrigger == ScoreTrigger.ACTIVITYSTART && activityType.contains(CHARGING_IDENTIFIER))
             {
                 double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                 
@@ -108,9 +114,27 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
             }
+
+
+            // Scoring of charging hogging
+            if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
+            {
+                                
+                if(
+                    chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
+                    !((activityType.contains("home") && hasChargerAtHome) || ((activityType.contains("work") && !activityType.contains("work_related")) && hasChargerAtWork)) // and charging was performed publicly
+                    ) 
+                {
+                    double delta_score = params.marginalUtilityOfStationHogging;
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.STATION_HOGGING, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.STATION_HOGGING, personId);
+                    score += delta_score;
+                }
+                    
+            }
             
             // Scoring on last activity
-            if (activityType.contains(LAST_ACT_IDENTIFIER))
+            if (scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(LAST_ACT_IDENTIFIER))
             {
                 // Calculate SOC difference
                 Double soc_diff =  soc - chargingBehaviourScoringEvent.getStartSoc();
