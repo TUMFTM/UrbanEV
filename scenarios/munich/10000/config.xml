@@ -20,8 +20,6 @@
 		<param name="homeChargingUtility" value="+1"/>
 		<param name="socDifferenceUtility" value="-10"/>
 		<param name="maxNumberSimultaneousPlanChanges" value="2"/>
-		<param name="timeAdjustmentProbability" value="0.1"/>
-		<param name="maxTimeFlexibility" value="600"/>
 		<param name="generateHomeChargersByPercentage" value="false"/>
 		<param name="homeChargerPercentage" value="80"/>
 		<param name="defaultHomeChargerPower" value="11"/>

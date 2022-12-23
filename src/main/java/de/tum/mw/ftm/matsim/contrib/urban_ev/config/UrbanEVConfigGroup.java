@@ -93,12 +93,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String MAXNUMBERSIMULTANEOUSPLANCHANGES = "maxNumberSimultaneousPlanChanges";
     static final String MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP = "The maximum number of changes to a persons charging plan that are introduced in one replanning step.";
 
-    public static final String TIMEADJUSTMENTPROBABILITY = "timeAdjustmentProbability";
-    static final String TIMEADJUSTMENTPROBABILITY_EXP = "The probability with which a persons decides to adjust their activity end times in order to increase their chances for a free charging spot at their next activity.";
-
-    public static final String MAXTIMEFLEXIBILITY = "maxTimeFlexibility";
-    static final String MAXTIMEFLEXIBILITY_EXP = "The maximum time span a person is willing to adjust their activity end times in order to increase their chances for a free charging spot at their next activity [s].";    
-
     // Initialization
     
     public static final String INITIALIZATION_ITERATIONS = "initializationIterations";
@@ -158,6 +152,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @Positive
     private double hoggingExemptionHourStart = 20.0;
+
+    @Positive
     private double hoggingExemptionHourStop = 8.0;
 
     // Charging parameters
@@ -171,12 +167,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @Positive
     private int maxNumberSimultaneousPlanChanges = 2;
-
-    @PositiveOrZero
-    private Double timeAdjustmentProbability = 0.1;
-
-    @PositiveOrZero
-    private int maxTimeFlexibility = 600;
 
     // DataIO
     @NotNull
@@ -211,8 +201,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(PARKING_SEARCH_RADIUS, PARKING_SEARCH_RADIUS_EXP);
         map.put(DEFAULT_RANGE_ANXIETY_THRESHOLD, DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP);
         map.put(MAXNUMBERSIMULTANEOUSPLANCHANGES, MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP);
-        map.put(TIMEADJUSTMENTPROBABILITY, TIMEADJUSTMENTPROBABILITY_EXP);
-        map.put(MAXTIMEFLEXIBILITY, MAXTIMEFLEXIBILITY_EXP);
         map.put(GENERATE_HOME_CHARGERS_BY_PERCENTAGE, GENERATE_HOME_CHARGERS_BY_PERCENTAGE_EXP);
         map.put(GENERATE_WORK_CHARGERS_BY_PERCENTAGE, GENERATE_WORK_CHARGERS_BY_PERCENTAGE_EXP);
         map.put(HOME_CHARGER_PERCENTAGE, HOME_CHARGER_PERCENTAGE_EXP);
@@ -241,26 +229,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(MAXNUMBERSIMULTANEOUSPLANCHANGES)
     public void setMaxNumberSimultaneousPlanChanges(int maxNumberSimultaneousPlanChanges) {
         this.maxNumberSimultaneousPlanChanges = maxNumberSimultaneousPlanChanges;
-    }
-
-    @StringGetter(TIMEADJUSTMENTPROBABILITY)
-    public Double getTimeAdjustmentProbability() {
-        return timeAdjustmentProbability;
-    }
-
-    @StringSetter(TIMEADJUSTMENTPROBABILITY)
-    public void setTimeAdjustmentProbability(Double timeAdjustmentProbability) {
-        this.timeAdjustmentProbability = timeAdjustmentProbability;
-    }
-
-    @StringGetter(MAXTIMEFLEXIBILITY)
-    public int getMaxTimeFlexibility() {
-        return maxTimeFlexibility;
-    }
-
-    @StringSetter(MAXTIMEFLEXIBILITY)
-    public void setMaxTimeFlexibility(int maxTimeFlexibility) {
-        this.maxTimeFlexibility = maxTimeFlexibility;
     }
 
     @StringGetter(RANGE_ANXIETY_UTILITY)
