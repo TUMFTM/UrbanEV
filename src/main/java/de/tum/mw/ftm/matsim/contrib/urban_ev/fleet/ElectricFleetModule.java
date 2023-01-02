@@ -32,14 +32,21 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.fleet;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+
+import de.tum.mw.ftm.matsim.contrib.urban_ev.EvModule;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.charging.ChargingPower;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.AuxEnergyConsumption;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.DriveEnergyConsumption;
+
 import org.matsim.api.core.v01.Id;
 import org.matsim.contrib.ev.EvConfigGroup;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.controler.AbstractModule;
+import org.matsim.core.controler.IterationCounter;
+import org.matsim.core.mobsim.framework.events.MobsimBeforeCleanupEvent;
+import org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener;
 import org.matsim.core.mobsim.qsim.AbstractQSimModule;
 
 import java.util.HashMap;
@@ -49,6 +56,10 @@ import java.util.Map;
  * @author Michal Maciejewski (michalm)
  */
 public class ElectricFleetModule extends AbstractModule {
+	
+	@Inject
+	private Config config;
+
 	@Inject
 	private EvConfigGroup evCfg;
 
@@ -86,6 +97,42 @@ public class ElectricFleetModule extends AbstractModule {
 								auxConsumptionFactory, chargingPowerFactory);
 					}
 				}).asEagerSingleton();
+
+		addQSimComponentBinding(EvModule.EV_COMPONENT).toInstance(new MobsimBeforeCleanupListener() {
+			@Inject
+			private ElectricFleetSpecification electricFleetSpecification;
+
+			@Inject
+			private ElectricFleet electricFleet;
+
+			@Inject
+			private IterationCounter iterationCounter;
+
+			@Override
+			public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent e) { 
+
+				if(urbanEVCfg.isTransferFinalSoCToNextIteration() || iterationCounter.getIterationNumber() == config.controler().getLastIteration())
+				{
+					for (ElectricVehicleSpecification oldSpec : electricFleetSpecification.getVehicleSpecifications().values()) {
+						
+						ElectricVehicle ev = electricFleet.getElectricVehicles().get(oldSpec.getId());
+						double socAtEndOfCurrentIteration = ev.getBattery().getSoc();
+					
+						ElectricVehicleSpecification electricVehicleSpecification = ImmutableElectricVehicleSpecification.newBuilder()
+							.id(ev.getId())
+							.vehicleType(ev.getVehicleType())
+							.chargerTypes(ev.getChargerTypes())
+							.initialSoc(socAtEndOfCurrentIteration)
+							.batteryCapacity(ev.getBattery().getCapacity())
+							.build();
+	
+						electricFleetSpecification.replaceVehicleSpecification(electricVehicleSpecification);
+					}
+				}
+				
+			}
+		});
+
 			}
 		});
 	}

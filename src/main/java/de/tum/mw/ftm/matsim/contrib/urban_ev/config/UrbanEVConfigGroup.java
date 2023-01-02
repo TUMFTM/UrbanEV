@@ -88,6 +88,9 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String DEFAULT_WORK_CHARGER_POWER = "defaultWorkChargerPower";
     static final String DEFAULT_WORK_CHARGER_POWER_EXP = "The power of work chargers if generateWorkChargersByPercentage is set to true [kW].";
 
+    public static final String TRANSFERFINALSOCTONEXTITERATION = "transferFinalSoCToNextIteration";
+    static final String TRANSFERFINALSOCTONEXTITERATION_EXP = "determines whether the resulting SoC at the end of the iteration X is set to be the initial SoC in iteration X+1 for each EV. If set to true, bear in mind that EV might start with 0% battery charge.";
+
     // Replanning
 
     public static final String MAXNUMBERSIMULTANEOUSPLANCHANGES = "maxNumberSimultaneousPlanChanges";
@@ -178,6 +181,10 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private int keepIterationsModulo = 10;
 
+    // General
+    @NotNull
+    private boolean transferFinalSoCToNextIteration = false;
+
     // Initialization
     @PositiveOrZero
     private int initializationIterations = 0;
@@ -218,6 +225,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(HOGGING_THRESHOLD_MINUTES, HOGGING_THRESHOLD_MINUTES_EXP);
         map.put(HOGGING_EXEMPTION_HOUR_START, HOGGING_EXEMPTION_HOUR_START_EXP);
         map.put(HOGGING_EXEMPTION_HOUR_STOP, HOGGING_EXEMPTION_HOUR_STOP_EXP);
+        map.put(TRANSFERFINALSOCTONEXTITERATION, TRANSFERFINALSOCTONEXTITERATION_EXP);
         return map;
     }
 
@@ -455,6 +463,16 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(INITIALIZATION_REPETITIONS)
     public void setInitializationRepetitions(int initializationRepetitions) {
         this.initializationRepetitions = initializationRepetitions;
+    }
+
+    @StringSetter(TRANSFERFINALSOCTONEXTITERATION)
+    public void setTransferFinalSoCToNextIteration(boolean transferFinalSoCToNextIteration) {
+        this.transferFinalSoCToNextIteration = transferFinalSoCToNextIteration;
+    }
+
+    @StringGetter(TRANSFERFINALSOCTONEXTITERATION)
+    public boolean isTransferFinalSoCToNextIteration() {
+        return transferFinalSoCToNextIteration;
     }
 
 }

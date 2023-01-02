@@ -41,20 +41,16 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
-import org.matsim.contrib.util.CSVReaders;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.IterationCounter;
-import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.core.controler.listener.StartupListener;
-import org.matsim.core.replanning.StrategyManager;
-import org.matsim.core.utils.misc.Time;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -67,7 +63,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Meant for event handlers that are created anew in each iteration and should operate only until the end of the current
@@ -80,10 +75,8 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	private final Collection<MobsimScopeEventHandler> eventHandlers = new ConcurrentLinkedQueue<>();
 	private final EventsManager eventsManager;
 	private Random random = new Random();
-	private StrategyManager strategyManager;
 	private static final String CHARGING_IDENTIFIER = " charging";
 
-	private int iterationNumber = 0;
 	private int lastIteration = 0;
 	private double endTime = 0;
 
@@ -107,8 +100,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	@Inject
 	private IterationCounter iterationCounter;
 
-	@Inject
-	private MatsimServices matsimServices;
 
 	@Inject
 	private Config config;
@@ -126,7 +117,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	public void notifyStartup(StartupEvent startupEvent) {
 		lastIteration = config.controler().getLastIteration();
 		endTime = config.qsim().getEndTime().seconds();
-		strategyManager = matsimServices.getStrategyManager();
 		UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
 		double parkingSearchRadius = urbanEVConfigGroup.getParkingSearchRadius();
 		double opportunityChargingShare = urbanEVConfigGroup.getOpportunityChargingShare();
@@ -276,66 +266,11 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 
 	@Override
 	public void notifyAfterMobsim(AfterMobsimEvent event) {
-		iterationNumber = iterationCounter.getIterationNumber();
+		
 		eventHandlers.forEach(eventsManager::removeHandler);
 		eventHandlers.clear();
 
-		// Todo: Check and revise this whole part
-		if (iterationNumber == lastIteration && endTime/(24*60*60)>1 && endTime%(24*60*60)==0 && lastIteration!=0) {
-			// get average soc distribution
-			int socDistibutionAtMidnight[] = new int[11];
-			AtomicInteger n = new AtomicInteger();
-			List<String[]> socs = CSVReaders.readTSV(Paths.get(controlerIO.getIterationFilename(iterationNumber, "soc_histogram_time_profiles.txt")).toString());
-			socs.forEach(row -> {
-				if (!row[0].equals("time")) {
-					double time = Time.parseTime(row[0]);
-					if (time > 0.3 * endTime && time % (24*60*60) == 0 && time < 0.8 * endTime) {
-						for (int i = 1; i < row.length; i++) {
-							socDistibutionAtMidnight[i-1] += Integer.parseInt(row[i]);
-						}
-						n.getAndIncrement();
-					}
-				}
-			});
-
-			// find relative soc distribution at midnight
-			double relativeSocDistribution[] = new double[11];
-			double sum = 0;
-			for (int value : socDistibutionAtMidnight) {
-				sum += value;
-			}
-			for (int i = 0; i < relativeSocDistribution.length; i++) {
-				relativeSocDistribution[i] = socDistibutionAtMidnight[i] / sum;
-			}
-
-			// update start socs
-			electricFleetSpecification.getVehicleSpecifications().forEach((id, ev) -> {
-
-				double startSoc = 0.0;
-				while (startSoc < urbanEVConfig.getDefaultRangeAnxietyThreshold()) {
-					double r = random.nextDouble();
-					double distributionSum = 0;
-					for (int i = 0; i < relativeSocDistribution.length; i++) {
-						distributionSum += relativeSocDistribution[i];
-						if (r < distributionSum) {
-							startSoc = 0.1 * ((double) i - random.nextDouble());
-							break;
-						}
-					}
-				}
-
-				double initialSoc = startSoc * ev.getBatteryCapacity();
-
-				ElectricVehicleSpecification electricVehicleSpecification = ImmutableElectricVehicleSpecification.newBuilder()
-						.id(id)
-						.vehicleType(ev.getVehicleType())
-						.chargerTypes(ev.getChargerTypes())
-						.initialSoc(initialSoc)
-						.batteryCapacity(ev.getBatteryCapacity())
-						.build();
-
-				electricFleetSpecification.replaceVehicleSpecification(electricVehicleSpecification);
-			});
+		if (iterationCounter.getIterationNumber() == lastIteration) {
 			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
 			electricFleetWriter.write(Paths.get(controlerIO.getOutputPath(),"output_evehicles.xml").toString());
 		}
