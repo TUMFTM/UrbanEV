@@ -183,7 +183,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     // General
     @NotNull
-    private boolean transferFinalSoCToNextIteration = false;
+    private boolean transferFinalSoCToNextIteration = true;
 
     // Initialization
     @PositiveOrZero
