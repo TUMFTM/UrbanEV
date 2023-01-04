@@ -86,7 +86,7 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 		writeChargingBehaviourScoringStats(chargingBehaviorScoresCollector);
 		writeChargingStats();
 		writeChargerOccupancyStats();
-		writeLinkEnergyStats();
+		//writeLinkEnergyStats();
 
 		// Reset ChargingBehaviorScoresCollector for next iteration
 		chargingBehaviorScoresCollector.reset();
