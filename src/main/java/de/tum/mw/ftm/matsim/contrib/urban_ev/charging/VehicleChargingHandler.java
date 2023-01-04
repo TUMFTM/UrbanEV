@@ -46,10 +46,8 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
 import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
-import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
@@ -59,7 +57,6 @@ import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.contrib.util.PartialSort;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.vehicles.Vehicle;
 
 import javax.inject.Inject;
 
@@ -69,7 +66,7 @@ import java.util.List;
 import java.util.Map;
 
 public class VehicleChargingHandler
-		implements ActivityStartEventHandler, ActivityEndEventHandler, PersonLeavesVehicleEventHandler,
+		implements ActivityStartEventHandler, ActivityEndEventHandler,
 		MobsimScopeEventHandler {
 
 	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
@@ -78,7 +75,6 @@ public class VehicleChargingHandler
 	public static final Integer SECONDS_PER_MINUTE = 60;
 	public static final Integer SECONDS_PER_HOUR = 60*SECONDS_PER_MINUTE;
 	public static final Integer SECONDS_PER_DAY = 24*SECONDS_PER_HOUR;
-	private Map<Id<Person>, Id<Vehicle>> lastVehicleUsed = new HashMap<>();
 	private Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = new HashMap<>();
 
 	private final ChargingInfrastructure chargingInfrastructure;
@@ -116,11 +112,10 @@ public class VehicleChargingHandler
 
 		String actType = event.getActType();
 		Id<Person> personId = event.getPersonId();
-		Id<Vehicle> vehicleId = lastVehicleUsed.get(personId);
 
-		if (vehicleId != null) {
+		if (personId != null) {
 
-			Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
+			Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
 
 			if (electricFleet.getElectricVehicles().containsKey(evId)) {
 				
@@ -179,13 +174,12 @@ public class VehicleChargingHandler
 		if (actType.endsWith(CHARGING_IDENTIFIER)) {
 
 			Id<Person> personId = event.getPersonId();
-			Id<Vehicle> vehicleId = lastVehicleUsed.get(personId);
+			Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
 
 			// If the vehicle is currently plugged in
-			if(vehiclesAtChargers.containsKey(vehicleId))
+			if(vehiclesAtChargers.containsKey(evId))
 			{
 				Person person = population.getPersons().get(personId);
-				Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
 				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
 
 				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
@@ -196,7 +190,7 @@ public class VehicleChargingHandler
 				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
 				double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
 
-				unplugVehicle(vehicleId, event.getTime());
+				unplugVehicle(evId, event.getTime());
 
 				double time = event.getTime();
 				double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
@@ -225,11 +219,6 @@ public class VehicleChargingHandler
 			}
 		}
 
-	}
-
-	@Override
-	public void handleEvent(PersonLeavesVehicleEvent event) {
-		lastVehicleUsed.put(event.getPersonId(), event.getVehicleId());
 	}
 
 	// @Override
@@ -310,10 +299,9 @@ public class VehicleChargingHandler
 		}
 	}
 
-	private void unplugVehicle(Id<Vehicle> vehicleId, double time)
+	private void unplugVehicle(Id<ElectricVehicle> evId, double time)
 	{
-		if (vehicleId != null) {
-			Id<ElectricVehicle> evId = Id.create(vehicleId, ElectricVehicle.class);
+		if (evId != null) {
 			Id<Charger> chargerId = vehiclesAtChargers.remove(evId);
 			if (chargerId != null) {
 				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
