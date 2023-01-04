@@ -42,6 +42,11 @@ import org.apache.commons.csv.CSVPrinter;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
 import org.matsim.core.controler.IterationCounter;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -75,6 +80,8 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 	Network network;
 	@Inject
 	UrbanEVConfigGroup urbanEVConfigGroup;
+	@Inject
+	Population population;
 
 	@Override
 	public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent event) {
@@ -86,6 +93,7 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 		writeChargingBehaviourScoringStats(chargingBehaviorScoresCollector);
 		writeChargingStats();
 		writeChargerOccupancyStats();
+		writeChargingPlans();
 		//writeLinkEnergyStats();
 
 		// Reset ChargingBehaviorScoresCollector for next iteration
@@ -97,6 +105,54 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 			cleanUpIterations(iterationCounter, urbanEVConfigGroup.isForceKeepNthIteration(), urbanEVConfigGroup.getKeepIterationsModulo());
 		}
 			
+	}
+
+	private void writeChargingPlans() {
+
+		try
+		{
+			CSVPrinter csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getIterationFilename(iterationCounter.getIterationNumber(), "chargingPlans.csv"))), CSVFormat.DEFAULT.withDelimiter(';').
+						withHeader(
+								"personId",
+								"activity",
+								"end_time",
+								"status"
+						));
+
+			for(Map.Entry<Id<Person>, ? extends Person> entry : population.getPersons().entrySet())
+			{
+				Person person = entry.getValue();
+				Plan selectedPlan = person.getSelectedPlan();
+			
+				for(PlanElement pe : selectedPlan.getPlanElements()){
+					if(pe instanceof Activity)
+					{
+						Activity act = (Activity) pe;
+						if(act.getType().contains("charging"))
+						{
+							String status = act.getType().contains("failed") ? "failed" : "success";
+							csvPrinter.printRecord(
+								person.getId().toString(),
+								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
+								Double.toString(act.getEndTime().seconds()),
+								status
+							);
+						}
+					}
+				}
+	
+			}	
+
+			csvPrinter.close();
+
+		}
+		catch (RuntimeException e){
+			e.printStackTrace();
+		}
+		catch (IOException io){
+			io.printStackTrace();
+		}
+
 	}
 
 	private void writeChargingStats(){
