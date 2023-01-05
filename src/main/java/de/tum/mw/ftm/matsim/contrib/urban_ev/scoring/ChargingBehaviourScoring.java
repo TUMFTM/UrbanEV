@@ -134,7 +134,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             }
             
             // Scoring on last activity
-            if (scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(LAST_ACT_IDENTIFIER))
+            if (activityType.contains(LAST_ACT_IDENTIFIER))
             {
                 // Calculate SOC difference
                 Double soc_diff =  soc - chargingBehaviourScoringEvent.getStartSoc();
