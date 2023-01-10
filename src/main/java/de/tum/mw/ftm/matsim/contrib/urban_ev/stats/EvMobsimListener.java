@@ -115,6 +115,8 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						withHeader(
 								"personId",
 								"activity",
+								"x",
+								"y",
 								"end_time",
 								"status"
 						));
@@ -134,6 +136,8 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 							csvPrinter.printRecord(
 								person.getId().toString(),
 								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
+								Double.toString(act.getCoord().getX()),
+								Double.toString(act.getCoord().getY()),
 								Double.toString(act.getEndTime().seconds()),
 								status
 							);
