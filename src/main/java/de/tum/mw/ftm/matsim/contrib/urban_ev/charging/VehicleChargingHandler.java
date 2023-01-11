@@ -64,6 +64,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public class VehicleChargingHandler
 		implements ActivityStartEventHandler, ActivityEndEventHandler,
@@ -86,6 +87,11 @@ public class VehicleChargingHandler
 	private final double hoggingExemptionHourStop;
 	private final double hoggingThresholdMinutes;
 	private final EventsManager eventsManager;
+
+	private enum ChargerSelectionMethod{
+		CLOSEST,
+		RANDOMOFCLOSEST
+	}
 
 	@Inject
 	public VehicleChargingHandler(ChargingInfrastructure chargingInfrastructure,
@@ -127,8 +133,28 @@ public class VehicleChargingHandler
 					
 					Activity activity = getActivity(person, event.getTime());
 					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
-					Charger selectedCharger = findBestCharger(activityCoord, ev);
+
+					// Location choice
+					List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
+					Charger selectedCharger = null;
+
+					// Use private charger if possible
+					for(Charger charger : suitableChargers)
+					{
+						if (charger.getAllowedVehicles().contains(evId))
+						{
+							selectedCharger = charger;
+							break;
+						}
+					}
+
+					// Select public charger if no private charger is available
+					if(selectedCharger == null)
+					{
+						selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.RANDOMOFCLOSEST);
+					}
 					
+					// Start charging if possible
 					if (selectedCharger != null) { // if charger was found, start charging
 						selectedCharger.getLogic().addVehicle(ev, event.getTime());
 						vehiclesAtChargers.put(evId, selectedCharger.getId());
@@ -264,11 +290,11 @@ public class VehicleChargingHandler
 	}
 
 	/**
-	 * Tries to find closest free charger of fitting type in vicinity of activity location
+	 * Tries to find the closest free chargers of fitting type in vicinity of activity location
 	 * If a charger is private, only allowed vehicles can charge there
 	 */
 
-	private Charger findBestCharger(Coord stopCoord, ElectricVehicle electricVehicle) {
+	private List<Charger> findSuitableChargers(Coord stopCoord, ElectricVehicle electricVehicle) {
 
 		List<Charger> filteredChargers = new ArrayList<>();
 
@@ -288,15 +314,44 @@ public class VehicleChargingHandler
 			}
 		});
 
-		List<Charger> nearestChargers = PartialSort.kSmallestElements(1, filteredChargers.stream(),
+		return filteredChargers;
+	}
+
+	private Charger selectCharger(List<Charger> suitableChargers, Coord stopCoord, ChargerSelectionMethod method) {
+
+		final int N_CONSIDERED_CANDIDATES = 3;
+		Charger selectedCharger = null;
+
+		if(suitableChargers.isEmpty())
+		{
+			// if we do not have suitable chargers available
+			selectedCharger = null;
+		}
+		else{
+			// if there are suitable chargers available 
+			if(method==ChargerSelectionMethod.CLOSEST || method==ChargerSelectionMethod.RANDOMOFCLOSEST)
+			{
+				// If the location is chosen based on its distance, sort all candidates
+				List<Charger> nearestChargers = PartialSort.kSmallestElements(N_CONSIDERED_CANDIDATES, suitableChargers.stream(),
 				(charger) -> DistanceUtils.calculateSquaredDistance(stopCoord, charger.getCoord()));
 
-		if (!nearestChargers.isEmpty()) {
-			return nearestChargers.get(0);
-		} else {
-			// log.error("No charger found for EV " + electricVehicle.getId().toString() + " at location " + stopCoord.toString());
-			return null;
+				if(method==ChargerSelectionMethod.CLOSEST)
+				{
+					// Select the closest charger
+					selectedCharger = nearestChargers.get(0);
+				}
+				else
+				{
+					// Select one of the N_CONSIDERED_CANDIDATES closest chargers
+					Random rand = new Random();
+					selectedCharger = nearestChargers.get(rand.nextInt(nearestChargers.size()));
+				}
+
+			}
 		}
+	
+		return selectedCharger;
+
 	}
 
 	private void unplugVehicle(Id<ElectricVehicle> evId, double time)
