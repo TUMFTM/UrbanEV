@@ -281,10 +281,15 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						"sumEnergyBalance",
 						"energyBalanceScoringPersons",
 						"meanEnergyBalance",
+						"sumOpportunityCharging",
 						"opportunityChargingScoringPersons",
-						"meanOpportunityChargingScore",
+						"meanOpportunityCharging",
+						"sumStationHogging",
 						"stationHoggingScoringPersons",
-						"sumStationHoggingScore"
+						"meanStationHogging",
+						"sumBatteryHealth",
+						"batteryHealthScoringPersons",
+						"meanBatteryHealth"
 				));
 			} else {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.APPEND), CSVFormat.DEFAULT.withDelimiter(';'));
@@ -292,26 +297,31 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
 
 			csvPrinter.printRecord(
-					Integer.toString(curIteration),
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 							// sum RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 	// number of persons scoring RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 							// mean RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 							// sum EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 	// number of persons scoring EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 							// mean EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 						// sum WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 	// number of persons scoring WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 						// mean WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 							// sum HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 	// number of persons scoring HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 							// mean HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// sum ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 	// number of persons scoring ENERGY_BALANCE
+					Integer.toString(curIteration),																															// iteration number
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 								// sum RANGE_ANXIETY
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 		// number of persons scoring RANGE_ANXIETY
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 								// mean RANGE_ANXIETY
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 								// sum EMPTY_BATTERY
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 		// number of persons scoring EMPTY_BATTERY
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 								// mean EMPTY_BATTERY
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 							// sum WALKING_DISTANCE
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 		// number of persons scoring WALKING_DISTANCE
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 							// mean WALKING_DISTANCE
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 								// sum HOME_CHARGING
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 		// number of persons scoring HOME_CHARGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 								// mean HOME_CHARGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 								// sum ENERGY_BALANCE
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 		// number of persons scoring ENERGY_BALANCE
 					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// mean ENERGY_BALANCE
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 						// sum OPPORTUNITY_CHARGING
 					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 	// number of persons scoring OPPORTUNITY_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 							// mean OPPORTUNITY_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 	// number of persons scoring STATION_HOGGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)) 							// sum STATION_HOGGING					
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 						// mean OPPORTUNITY_CHARGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 							// sum STATION_HOGGING
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 		// number of persons scoring STATION_HOGGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 							// mean STATION_HOGGING
+					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)), 								// sum BATTERY_HEALTH
+					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)), 		// number of persons scoring BATTERY_HEALTH
+					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)) 								// mean BATTERY_HEALTH
 			);
 
 

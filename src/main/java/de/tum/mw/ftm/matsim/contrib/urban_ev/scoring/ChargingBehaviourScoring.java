@@ -21,7 +21,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         HOME_CHARGING,
         ENERGY_BALANCE, 
         OPPORTUNITY_CHARGING, 
-        STATION_HOGGING
+        STATION_HOGGING, 
+        BATTERY_HEALTH
     }
 
     private double score;
@@ -64,27 +65,48 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             String activityType = chargingBehaviourScoringEvent.getActivityType();
             ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
 
-            // activity independent scoring components at activity start
-
-            // punish soc below threshold
-            if (scoreTrigger == ScoreTrigger.ACTIVITYSTART && soc < rangeAnxietyThreshold && soc > 0) {
-                double delta_score = params.marginalUtilityOfRangeAnxiety_soc * (rangeAnxietyThreshold - soc) / rangeAnxietyThreshold;
-                chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
-                chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
-                score += delta_score;
+            // soc-dependent scoring components at activity start
+            if (scoreTrigger == ScoreTrigger.ACTIVITYSTART)
+            {
                 
-                // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-                person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
-                
-            } else if (scoreTrigger == ScoreTrigger.ACTIVITYSTART && soc == 0) {
-                // severely punish empty battery
-                double delta_score = params.utilityOfEmptyBattery;
-                chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.EMPTY_BATTERY, delta_score);
-                chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.EMPTY_BATTERY, personId);
-                score += delta_score;
+                double delta_score = 0.0;
 
-                // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-                person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+                if(soc==0)
+                {
+                    // empty battery
+                    delta_score = params.utilityOfEmptyBattery;
+                    
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.EMPTY_BATTERY, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.EMPTY_BATTERY, personId);
+                    
+                    // Add all critical agents to the criticalSOC subpopulation such that they get replanned
+                    person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+                }
+                else if(soc<params.optimalSOC&&soc>0)
+                {
+                    double epsilon = 0.01;
+
+                    // range anxiety
+                    delta_score = params.utilityOfEmptyBattery * Math.exp(Math.log(epsilon)*(soc/params.optimalSOC));
+
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
+                    
+                    if(soc<=rangeAnxietyThreshold)
+                    {
+                        // Add all critical agents to the criticalSOC subpopulation such that they get replanned
+                        person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+                    }
+                }
+                else
+                {
+                    // battery health (soc>params.optimalSOC)
+                    delta_score = ((soc-params.optimalSOC)/(1.0-params.optimalSOC))*params.batteryHealthStressUtility;
+                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.BATTERY_HEALTH, delta_score);
+                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.BATTERY_HEALTH, personId);
+                }
+
+                score += delta_score;
 
             }
 

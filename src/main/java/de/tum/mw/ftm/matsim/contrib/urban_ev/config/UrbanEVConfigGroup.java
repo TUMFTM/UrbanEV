@@ -30,7 +30,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     static final String SOC_DIFFERENCE_UTILITY_EXP = "[utils] utility for difference between start and end soc";
 
     public static final String DEFAULT_RANGE_ANXIETY_THRESHOLD = "defaultRangeAnxietyThreshold";
-    static final String DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP = "Default threshold for scoring. Set person attribute to overwrite. [% soc]";
+    static final String DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP = "Default threshold for scoring. Set person attribute to overwrite. [0.0-1.0]";
 
     public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
     static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
@@ -49,6 +49,12 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     public static final String HOGGING_THRESHOLD_MINUTES = "hoggingThresholdMinutes";
     static final String HOGGING_THRESHOLD_MINUTES_EXP = "[min] the number of minutes after which a plugged duration is considered as punishable station hogging.";
+
+    public static final String OPTIMAL_SOC = "optimalSOC";
+    static final String OPTIMAL_SOC_EXP = "Optimal soc: agents will be punished if they have greater or smaller socs (see doc for details). [0.0-1.0]";
+
+    public static final String BATTERY_HEALTH_STRESS_UTILITY = "batteryHealthStressUtility";
+    static final String BATTERY_HEALTH_STRESS_UTILITY_EXP = "The utility of exceeding the optimal soc to the max (scoring is calculated linearly depending on the offset from the optimal soc)";
 
     // DataIO
 
@@ -159,6 +165,12 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @Positive
     private double hoggingExemptionHourStop = 8.0;
 
+    @Positive
+    private double optimalSOC = 0.8;
+
+    @NotNull
+    private double batteryHealthStressUtility = -0.1;
+
     // Charging parameters
     @Positive
     private int parkingSearchRadius = 500;
@@ -226,6 +238,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(HOGGING_EXEMPTION_HOUR_START, HOGGING_EXEMPTION_HOUR_START_EXP);
         map.put(HOGGING_EXEMPTION_HOUR_STOP, HOGGING_EXEMPTION_HOUR_STOP_EXP);
         map.put(TRANSFERFINALSOCTONEXTITERATION, TRANSFERFINALSOCTONEXTITERATION_EXP);
+        map.put(OPTIMAL_SOC, OPTIMAL_SOC_EXP);
+        map.put(BATTERY_HEALTH_STRESS_UTILITY, BATTERY_HEALTH_STRESS_UTILITY_EXP);
         return map;
     }
 
@@ -473,6 +487,26 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringGetter(TRANSFERFINALSOCTONEXTITERATION)
     public boolean isTransferFinalSoCToNextIteration() {
         return transferFinalSoCToNextIteration;
+    }
+
+    @StringGetter(BATTERY_HEALTH_STRESS_UTILITY)
+    public double getBatteryHealthStressUtility() {
+        return batteryHealthStressUtility;
+    }
+
+    @StringSetter(BATTERY_HEALTH_STRESS_UTILITY)
+    public void setBatteryHealthStressUtility(double batteryHealthStressUtility) {
+        this.batteryHealthStressUtility = batteryHealthStressUtility;
+    }
+
+    @StringGetter(OPTIMAL_SOC)
+    public double getOptimalSOC() {
+        return optimalSOC;
+    }
+
+    @StringSetter(OPTIMAL_SOC)
+    public void setOptimalSOC(double optimalSOC) {
+        this.optimalSOC = optimalSOC;
     }
 
 }
