@@ -122,70 +122,15 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		double parkingSearchRadius = urbanEVConfig.getParkingSearchRadius();
 		double opportunityChargingShare = urbanEVConfig.getOpportunityChargingShare();
 
+		// Determine persons that could potentially engage in opportunity charging at public chargers		
+		List<Person> possibleOpportunityChargingAgents = new ArrayList<>();
+
+
         population.getPersons().forEach((personId, person) -> {
 
-			// Make sure all activities end shortly before the simulation ends
-			for(Plan plan: person.getPlans()){
-				ArrayList<Activity> activities = getActivities(plan);
-				if(activities.size()!=0)
-				{
-					Activity lastActinPlanEndingAfterSim = null;
-					List<Integer> delActivitiesIdx = new ArrayList<Integer>();
-					// Find the first activity that ends after the end of the simulation if there is any
-					for(int i = 0; i<plan.getPlanElements().size(); i++)
-					{
-						PlanElement pe = plan.getPlanElements().get(i);
-						if(pe instanceof Activity)
-						{
-							Activity act = (Activity) pe;
-							if(Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
-							{
-								lastActinPlanEndingAfterSim = act;
-							}
-							else if(!Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
-							{
-								// There are even more activities that end after the simulation time
-								if(act.getEndTime().seconds()>lastActinPlanEndingAfterSim.getEndTime().seconds())
-								{
-									// Remove if the activity ends even later
-									delActivitiesIdx.add(i);
-								}
-
-							}
-							else if(!act.getEndTime().isDefined())
-							{
-								// Remove if the activity has no end time
-								delActivitiesIdx.add(i);
-							}
-						}
-
-					}
-					Collections.sort(delActivitiesIdx, Collections.reverseOrder());  
-					// Delete all activities that end even later than the expected last activity
-					for(int i = 0; i<delActivitiesIdx.size(); i++)
-					{
-						PopulationUtils.removeActivity(plan, delActivitiesIdx.get(i));
-					}
-
-					if(!Objects.isNull(lastActinPlanEndingAfterSim))
-					{
-						// If there is at least one activity ending after the simulation time 
-						// Make it end right before the end of the simulation and introduce an aritifical activity in its place 
-						// that serves to trigger unplugging events for all chargers at simulation end time
-						lastActinPlanEndingAfterSim.setEndTime(endTime-1);
-						Activity newLastActinPlan = PopulationUtils.createActivityFromCoord(lastActinPlanEndingAfterSim.getType(),lastActinPlanEndingAfterSim.getCoord());
-						newLastActinPlan.setEndTime(endTime);
-						if(!newLastActinPlan.getType().contains("end"))
-						{
-							newLastActinPlan.setType(newLastActinPlan.getType().concat(" end"));
-						}
-						// make sure charging is never associated with the end activity 
-						newLastActinPlan.setType(newLastActinPlan.getType().replace(" charging", ""));
-						lastActinPlanEndingAfterSim.setType(lastActinPlanEndingAfterSim.getType().replace(" end", ""));
-						plan.addActivity(newLastActinPlan);
-					}
-				}
-			}
+			// Adjust end times such that they end shortly before the simulation
+			// to make sure to catch charging effects occuring on the last act
+			adjustEndTimes(person);
 			
 			// add default range anxiety threshold to person attributes if none given
 			if (person.getAttributes().getAttribute("rangeAnxietyThreshold") == null) {
@@ -199,23 +144,18 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
 			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
 
+			// Prepare opportunity charging decisions
+
+			// Remove all existing characteristics to not interfere with initialization runs 
+			person.getAttributes().putAttribute("opportunityCharging", "false");
+			// Determine if the person would be suited for opportunity charging
+			if(determineOpportunityChargingPossibility(person, parkingSearchRadius, chargingInfrastructureSpecification)) possibleOpportunityChargingAgents.add(person);
+
         });
 
 		// Write final chargers to file
 		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
 		chargerWriter.write(config.controler().getOutputDirectory().concat("/chargers_complete.xml"));
-
-		// Determine persons that could potentially engage in opportunity charging at public chargers		
-		List<Person> possibleOpportunityChargingAgents = new ArrayList<>();
-
-		population.getPersons().forEach((personId, person) -> {
-			
-			// Remove all existing characteristics to not interfere with initialization runs 
-			person.getAttributes().putAttribute("opportunityCharging", "false");
-
-			// Determine if the person would be suited for opportunity charging
-			if(determineOpportunityChargingPossibility(person, parkingSearchRadius, chargingInfrastructureSpecification)) possibleOpportunityChargingAgents.add(person);
-		});
 
 		// Determine population to engage in opportunity charging
 		int n_opportunity_charging_target = (int)(population.getPersons().size()*opportunityChargingShare);
@@ -438,6 +378,72 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		
 		}
 		return activities;
+	}
+
+	private void adjustEndTimes(Person person)
+	{
+		// Make sure all activities end shortly before the simulation ends
+		for(Plan plan: person.getPlans()){
+			ArrayList<Activity> activities = getActivities(plan);
+			if(activities.size()!=0)
+			{
+				Activity lastActinPlanEndingAfterSim = null;
+				List<Integer> delActivitiesIdx = new ArrayList<Integer>();
+				// Find the first activity that ends after the end of the simulation if there is any
+				for(int i = 0; i<plan.getPlanElements().size(); i++)
+				{
+					PlanElement pe = plan.getPlanElements().get(i);
+					if(pe instanceof Activity)
+					{
+						Activity act = (Activity) pe;
+						if(Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
+						{
+							lastActinPlanEndingAfterSim = act;
+						}
+						else if(!Objects.isNull(lastActinPlanEndingAfterSim) && act.getEndTime().isDefined() && act.getEndTime().seconds()>endTime)
+						{
+							// There are even more activities that end after the simulation time
+							if(act.getEndTime().seconds()>lastActinPlanEndingAfterSim.getEndTime().seconds())
+							{
+								// Remove if the activity ends even later
+								delActivitiesIdx.add(i);
+							}
+
+						}
+						else if(!act.getEndTime().isDefined())
+						{
+							// Remove if the activity has no end time
+							delActivitiesIdx.add(i);
+						}
+					}
+
+				}
+				Collections.sort(delActivitiesIdx, Collections.reverseOrder());  
+				// Delete all activities that end even later than the expected last activity
+				for(int i = 0; i<delActivitiesIdx.size(); i++)
+				{
+					PopulationUtils.removeActivity(plan, delActivitiesIdx.get(i));
+				}
+
+				if(!Objects.isNull(lastActinPlanEndingAfterSim))
+				{
+					// If there is at least one activity ending after the simulation time 
+					// Make it end right before the end of the simulation and introduce an aritifical activity in its place 
+					// that serves to trigger unplugging events for all chargers at simulation end time
+					lastActinPlanEndingAfterSim.setEndTime(endTime-1);
+					Activity newLastActinPlan = PopulationUtils.createActivityFromCoord(lastActinPlanEndingAfterSim.getType(),lastActinPlanEndingAfterSim.getCoord());
+					newLastActinPlan.setEndTime(endTime);
+					if(!newLastActinPlan.getType().contains("end"))
+					{
+						newLastActinPlan.setType(newLastActinPlan.getType().concat(" end"));
+					}
+					// make sure charging is never associated with the end activity 
+					newLastActinPlan.setType(newLastActinPlan.getType().replace(" charging", ""));
+					lastActinPlanEndingAfterSim.setType(lastActinPlanEndingAfterSim.getType().replace(" end", ""));
+					plan.addActivity(newLastActinPlan);
+				}
+			}
+		}
 	}
 
 }
