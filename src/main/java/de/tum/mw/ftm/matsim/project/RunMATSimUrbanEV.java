@@ -111,10 +111,6 @@ public class RunMATSimUrbanEV {
 				// use new vehicles file for next initialization
 				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
 				PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
-				
-				// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
-				urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
-				urbanEVConfigGroup.setGenerateWorkChargersByPercentage(false);
 
 				// use new vehicles file and plans for training
 				evConfigGroup.setVehiclesFile("output/init" + Integer.toString(repetition) + "/output_evehicles.xml");
@@ -126,10 +122,6 @@ public class RunMATSimUrbanEV {
 			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) config.getModules().get("plans");
 			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initRepetitions) + "/output_evehicles.xml");
 			plansConfigGroup.setInputFile("output/init" + Integer.toString(initRepetitions) + "/output_plans.xml.gz");
-
-			// Make sure home and work chargers are carried over from previous initialization runs by reading them from the population file
-			urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
-			urbanEVConfigGroup.setGenerateHomeChargersByPercentage(false);
 
 			// Set output directory
 			config.controler().setOutputDirectory(baseOutputDirectory + "/train");

@@ -76,24 +76,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String PARKING_SEARCH_RADIUS = "parkingSearchRadius";
     static final String PARKING_SEARCH_RADIUS_EXP = "Radius around activity location in which agents looks for available chargers [m]";
 
-    public static final String GENERATE_HOME_CHARGERS_BY_PERCENTAGE = "generateHomeChargersByPercentage";
-    static final String GENERATE_HOME_CHARGERS_BY_PERCENTAGE_EXP = "If set to true, home charger information from the population file will be ignored. Instead home chargers will be generated randomly given the homeChargerPercentage share. [true/false]";
-
-    public static final String GENERATE_WORK_CHARGERS_BY_PERCENTAGE = "generateWorkChargersByPercentage";
-    static final String GENERATE_WORK_CHARGERS_BY_PERCENTAGE_EXP = "If set to true, work charger information from the population file will be ignored. Instead work chargers will be generated randomly given the workChargerPercentage share. [true/false]";
-
-    public static final String HOME_CHARGER_PERCENTAGE = "homeChargerPercentage";
-    static final String HOME_CHARGER_PERCENTAGE_EXP = "Share of the population that will be equipped with a home charger if generateHomeChargersByPercentage is set to true. [%]";
-
-    public static final String WORK_CHARGER_PERCENTAGE = "workChargerPercentage";
-    static final String WORK_CHARGER_PERCENTAGE_EXP = "Share of the population that will be equipped with a work charger if generateWorkChargersByPercentage is set to true. [%]";
-
-    public static final String DEFAULT_HOME_CHARGER_POWER = "defaultHomeChargerPower";
-    static final String DEFAULT_HOME_CHARGER_POWER_EXP = "The power of home chargers if generateHomeChargersByPercentage is set to true [kW].";
-
-    public static final String DEFAULT_WORK_CHARGER_POWER = "defaultWorkChargerPower";
-    static final String DEFAULT_WORK_CHARGER_POWER_EXP = "The power of work chargers if generateWorkChargersByPercentage is set to true [kW].";
-
     public static final String TRANSFERFINALSOCTONEXTITERATION = "transferFinalSoCToNextIteration";
     static final String TRANSFERFINALSOCTONEXTITERATION_EXP = "determines whether the resulting SoC at the end of the iteration X is set to be the initial SoC in iteration X+1 for each EV. If set to true, bear in mind that EV might start with 0% battery charge.";
 
@@ -109,24 +91,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     public static final String INITIALIZATION_REPETITIONS = "initializationRepetitions";
     static final String INITIALIZATION_REPETITIONS_EXP = "[integer] Number of repetitions of the initialization routine.";
-
-    // Charger parameters
-    private boolean generateHomeChargersByPercentage = false;
-
-    private boolean generateWorkChargersByPercentage = false;
-
-    @PositiveOrZero
-    private double homeChargerPercentage = 0.0;
-
-    @PositiveOrZero
-    private double workChargerPercentage = 0.0;
-
-    @PositiveOrZero
-    private double defaultHomeChargerPower = 11.0;
-
-    @PositiveOrZero
-    private double defaultWorkChargerPower = 11.0;
-
 
     // Scoring parameters
     @NotNull
@@ -220,12 +184,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(PARKING_SEARCH_RADIUS, PARKING_SEARCH_RADIUS_EXP);
         map.put(DEFAULT_RANGE_ANXIETY_THRESHOLD, DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP);
         map.put(MAXNUMBERSIMULTANEOUSPLANCHANGES, MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP);
-        map.put(GENERATE_HOME_CHARGERS_BY_PERCENTAGE, GENERATE_HOME_CHARGERS_BY_PERCENTAGE_EXP);
-        map.put(GENERATE_WORK_CHARGERS_BY_PERCENTAGE, GENERATE_WORK_CHARGERS_BY_PERCENTAGE_EXP);
-        map.put(HOME_CHARGER_PERCENTAGE, HOME_CHARGER_PERCENTAGE_EXP);
-        map.put(WORK_CHARGER_PERCENTAGE, WORK_CHARGER_PERCENTAGE_EXP);
-        map.put(DEFAULT_HOME_CHARGER_POWER, DEFAULT_HOME_CHARGER_POWER_EXP);
-        map.put(DEFAULT_WORK_CHARGER_POWER, DEFAULT_WORK_CHARGER_POWER_EXP);
         map.put(OPPORTUNITY_CHARGING_SHARE, OPPORTUNITY_CHARGING_SHARE_EXP);
         map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
         map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
@@ -311,70 +269,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(PARKING_SEARCH_RADIUS)
     public void setParkingSearchRadius(int parkingSearchRadius) {
         this.parkingSearchRadius = parkingSearchRadius;
-    }
-
-    @StringGetter(GENERATE_HOME_CHARGERS_BY_PERCENTAGE)
-    public boolean isGenerateHomeChargersByPercentage() {
-        return generateHomeChargersByPercentage;
-    }
-
-    @StringSetter(GENERATE_HOME_CHARGERS_BY_PERCENTAGE)
-    public void setGenerateHomeChargersByPercentage(boolean generateHomeChargersByPercentage) {
-        this.generateHomeChargersByPercentage = generateHomeChargersByPercentage;
-    }
-
-    @StringGetter(GENERATE_WORK_CHARGERS_BY_PERCENTAGE)
-    public boolean isGenerateWorkChargersByPercentage() {
-        return generateWorkChargersByPercentage;
-    }
-
-    @StringSetter(GENERATE_WORK_CHARGERS_BY_PERCENTAGE)
-    public void setGenerateWorkChargersByPercentage(boolean generateWorkChargersByPercentage) {
-        this.generateWorkChargersByPercentage = generateWorkChargersByPercentage;
-    }
-
-
-    @StringGetter(HOME_CHARGER_PERCENTAGE)
-    public double getHomeChargerPercentage() {
-        return homeChargerPercentage;
-    }
-
-    @StringSetter(HOME_CHARGER_PERCENTAGE)
-    public void setHomeChargerPercentage(double homeChargerPercentage) {
-        this.homeChargerPercentage = homeChargerPercentage;
-    }
-
-
-    @StringGetter(WORK_CHARGER_PERCENTAGE)
-    public double getWorkChargerPercentage() {
-        return workChargerPercentage;
-    }
-
-    @StringSetter(WORK_CHARGER_PERCENTAGE)
-    public void setWorkChargerPercentage(double workChargerPercentage) {
-        this.workChargerPercentage = workChargerPercentage;
-    }
-
-
-    @StringGetter(DEFAULT_HOME_CHARGER_POWER)
-    public double getDefaultHomeChargerPower() {
-        return defaultHomeChargerPower;
-    }
-
-    @StringSetter(DEFAULT_HOME_CHARGER_POWER)
-    public void setDefaultHomeChargerPower(double defaultHomeChargerPower) {
-        this.defaultHomeChargerPower = defaultHomeChargerPower;
-    }
-
-
-    @StringGetter(DEFAULT_WORK_CHARGER_POWER)
-    public double getDefaultWorkChargerPower() {
-        return defaultWorkChargerPower;
-    }
-
-    @StringSetter(DEFAULT_WORK_CHARGER_POWER)
-    public void setDefaultWorkChargerPower(double defaultWorkChargerPower) {
-        this.defaultWorkChargerPower = defaultWorkChargerPower;
     }
 
     @StringGetter(OPPORTUNITY_CHARGING_SHARE)

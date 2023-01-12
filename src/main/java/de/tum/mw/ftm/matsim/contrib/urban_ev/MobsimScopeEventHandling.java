@@ -113,13 +113,14 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	}
 
 
+	// Gets fired once in every MATSim run (multiple times when having initialization runs)
 	@Override
 	public void notifyStartup(StartupEvent startupEvent) {
+		 
 		lastIteration = config.controler().getLastIteration();
 		endTime = config.qsim().getEndTime().seconds();
-		UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
-		double parkingSearchRadius = urbanEVConfigGroup.getParkingSearchRadius();
-		double opportunityChargingShare = urbanEVConfigGroup.getOpportunityChargingShare();
+		double parkingSearchRadius = urbanEVConfig.getParkingSearchRadius();
+		double opportunityChargingShare = urbanEVConfig.getOpportunityChargingShare();
 
         population.getPersons().forEach((personId, person) -> {
 
@@ -185,47 +186,24 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 					}
 				}
 			}
-
+			
 			// add default range anxiety threshold to person attributes if none given
 			if (person.getAttributes().getAttribute("rangeAnxietyThreshold") == null) {
 				person.getAttributes().putAttribute("rangeAnxietyThreshold", String.valueOf(urbanEVConfig.getDefaultRangeAnxietyThreshold()));
 			}
-
-			// add work and home chargers
-			double homeChargerPower;
-			double workChargerPower;
-
-			// Determine home charging power
-			if(!urbanEVConfig.isGenerateHomeChargersByPercentage()) {
-				// Generate home chargers based on population attributes
-				homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
-			} else {
-				if(random.nextDouble()<=urbanEVConfig.getHomeChargerPercentage()/100.0){
-					// Randomly assign home charger with the corresponding probability
-					homeChargerPower = urbanEVConfig.getDefaultHomeChargerPower();
-				} else {
-					homeChargerPower = 0.0;
-				}
-			}
-
-			// Determine work charging power
-			if(!urbanEVConfig.isGenerateWorkChargersByPercentage()) {
-				// Generate work chargers based on population attributes
-				workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
-			} else {
-				if(random.nextDouble()<=urbanEVConfig.getWorkChargerPercentage()/100.0){
-					// Randomly assign work charger with the corresponding probability
-					workChargerPower = urbanEVConfig.getDefaultWorkChargerPower();
-				} else {
-					workChargerPower = 0.0;
-				}
-			}
-
+			
 			// Add home and work chargers if necessary
+			double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
+			double workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
+
 			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
 			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
-			
+
         });
+
+		// Write final chargers to file
+		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
+		chargerWriter.write(config.controler().getOutputDirectory().concat("/chargers_complete.xml"));
 
 		// Determine persons that could potentially engage in opportunity charging at public chargers		
 		List<Person> possibleOpportunityChargingAgents = new ArrayList<>();
@@ -258,10 +236,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 
 		// Flag persons for opportunity charging
 		opportunityChargingAgents.forEach(person -> {prepareOpportunityChargingPerson(person, parkingSearchRadius);});
-
-        // Write final chargers to file
-		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
-		chargerWriter.write(config.controler().getOutputDirectory().concat("/chargers_complete.xml"));
 	}
 
 	@Override
