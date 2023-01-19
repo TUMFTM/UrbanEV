@@ -42,7 +42,6 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.IterationCounter;
@@ -61,7 +60,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -74,8 +72,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MobsimScopeEventHandling implements StartupListener, AfterMobsimListener {
 	private final Collection<MobsimScopeEventHandler> eventHandlers = new ConcurrentLinkedQueue<>();
 	private final EventsManager eventsManager;
-	private Random random = new Random();
-	private static final String CHARGING_IDENTIFIER = " charging";
 
 	private int lastIteration = 0;
 	private double endTime = 0;
@@ -119,12 +115,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		 
 		lastIteration = config.controler().getLastIteration();
 		endTime = config.qsim().getEndTime().seconds();
-		double parkingSearchRadius = urbanEVConfig.getParkingSearchRadius();
-		double opportunityChargingShare = urbanEVConfig.getOpportunityChargingShare();
-
-		// Determine persons that could potentially engage in opportunity charging at public chargers		
-		List<Person> possibleOpportunityChargingAgents = new ArrayList<>();
-
 
         population.getPersons().forEach((personId, person) -> {
 
@@ -143,39 +133,11 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 
 			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
 			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
-
-			// Prepare opportunity charging decisions
-
-			// Remove all existing characteristics to not interfere with initialization runs 
-			person.getAttributes().putAttribute("opportunityCharging", "false");
-			// Determine if the person would be suited for opportunity charging
-			if(determineOpportunityChargingPossibility(person, parkingSearchRadius, chargingInfrastructureSpecification)) possibleOpportunityChargingAgents.add(person);
-
         });
 
 		// Write final chargers to file
 		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
 		chargerWriter.write(config.controler().getOutputDirectory().concat("/chargers_complete.xml"));
-
-		// Determine population to engage in opportunity charging
-		int n_opportunity_charging_target = (int)(population.getPersons().size()*opportunityChargingShare);
-		List<Person> opportunityChargingAgents = new ArrayList<>();
-
-		if(n_opportunity_charging_target>=possibleOpportunityChargingAgents.size())
-		{
-			// If there are not enough agents that can potentially engage in opportunity charging, take what's there
-			opportunityChargingAgents = possibleOpportunityChargingAgents;
-		}
-		else{
-			// If there are more agents with the desired characteristics than necessary, randomly take as much as needed
-			for(int i = 0; i<n_opportunity_charging_target; i++)
-			{
-				opportunityChargingAgents.add(possibleOpportunityChargingAgents.remove(random.nextInt(possibleOpportunityChargingAgents.size())));
-			}
-		}
-
-		// Flag persons for opportunity charging
-		opportunityChargingAgents.forEach(person -> {prepareOpportunityChargingPerson(person, parkingSearchRadius);});
 	}
 
 	@Override
@@ -232,136 +194,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			}
 		}
 			
-	}
-
-	private boolean determineOpportunityChargingPossibility(Person person, double parkingSearchRadius, ChargingInfrastructureSpecification chargingInfrastructure)
-	{
-		
-		double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
-		double workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
-
-		// If the person owns at least one private charger
-		if(homeChargerPower==0.0&&workChargerPower==0.0)
-		{
-			// If the agent does not own a private charger it is not a candidate for opportunity charging
-			return false;
-		}
-
-		// Check if at least one suited opportunity charging instance exists in all plans of the person
-		for(Plan plan:person.getPlans()){
-			
-			boolean planContainsOtherActsWithPublicChargingOpportunities = false;
-
-			for(PlanElement pe:plan.getPlanElements()){
-
-				if (pe instanceof Activity) {
-
-					Activity act = (Activity) pe;
-					String actType = act.getType();
-					Coord stopCoord = act.getCoord();
-
-					if((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
-					{
-						if(availablePublicChargers(stopCoord, parkingSearchRadius)){
-							planContainsOtherActsWithPublicChargingOpportunities = true;
-							break;
-						}
-					}
-					
-				}
-
-			}
-
-			if(!planContainsOtherActsWithPublicChargingOpportunities)
-			{
-				return false;
-			}
-
-		}			
-		
-		return true;
-	}
-
-	private boolean availablePublicChargers(Coord stopCoord, double parkingSearchRadius){
-
-		List<ChargerSpecification> filteredChargers = new ArrayList<>();
-
-		chargingInfrastructureSpecification.getChargerSpecifications().values().forEach(charger -> {
-			// filter out private chargers
-			if (charger.getAllowedVehicles().isEmpty()) {
-				// filter out chargers that are out of range
-				if (DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius) {
-					filteredChargers.add(charger);
-				}
-			}
-		});
-		if(!filteredChargers.isEmpty()){
-			return true;
-		}
-		else{
-			return false;
-		}
-	}
-
-	private void prepareOpportunityChargingPerson(Person person, double parkingSearchRadius){
-					
-		person.getAttributes().putAttribute("opportunityCharging", "true");
-
-		// Make sure that at least one opportunity charging instance exists in all plans of the person
-		for(Plan plan:person.getPlans()){
-			
-			boolean planContainsSuitableOtherChargingAct = false;
-			ArrayList<Activity> suitableNonHomeNonWorkActs = new ArrayList<>();
-
-			for(PlanElement pe:plan.getPlanElements()){
-
-				if (pe instanceof Activity) {
-
-					Activity act = (Activity) pe;
-					String actType = act.getType();
-					
-					if(
-						((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
-						&&
-						!actType.contains("end")
-						&&
-						availablePublicChargers(act.getCoord(), parkingSearchRadius)						
-						)
-					{
-						// store all activities that are not at home or work to later add a non-home/non-work charging activity if none is present in the plan
-						suitableNonHomeNonWorkActs.add(act);
-
-						if(actType.contains(CHARGING_IDENTIFIER)){
-							// this plan contains a non-home/non-work charging activity
-							planContainsSuitableOtherChargingAct=true;
-							break;
-						}
-						
-					}
-					
-				}
-
-			}
-
-			if(!planContainsSuitableOtherChargingAct){
-				// add a charging activity away from home/work to the plan if possible. Otherwise make sure the person is not marked to participate in opportunity charging
-				int n_nonHomeNonWork = suitableNonHomeNonWorkActs.size();
-				if(n_nonHomeNonWork>0)
-				{
-					Activity randomNonHomeNonWorkActivity = suitableNonHomeNonWorkActs.get(random.nextInt(n_nonHomeNonWork));
-					randomNonHomeNonWorkActivity.setType(randomNonHomeNonWorkActivity.getType() + CHARGING_IDENTIFIER);
-				}
-				else
-				{
-					// The agent can not take part in opportunity charging, because it only dwells at home and work
-					person.getAttributes().putAttribute("opportunityCharging", "false");
-
-					// once a single plan of a person does not allow for opportunity charging, abort
-					break;
-				}
-			}
-
-		}
 	}
 
 	private ArrayList<Activity> getActivities(Plan plan){
