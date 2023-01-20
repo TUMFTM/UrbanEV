@@ -32,9 +32,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String DEFAULT_RANGE_ANXIETY_THRESHOLD = "defaultRangeAnxietyThreshold";
     static final String DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP = "Default threshold for scoring. Set person attribute to overwrite. [0.0-1.0]";
 
-    public static final String OPPORTUNITY_CHARGING_SHARE = "opportunityChargingShare";
-    static final String OPPORTUNITY_CHARGING_SHARE_EXP = "The share of people who own a private charger at home/work but engage in opportunity charging at least once during simulation time.";
-
     public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
     static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
 
@@ -75,6 +72,9 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     public static final String PARKING_SEARCH_RADIUS = "parkingSearchRadius";
     static final String PARKING_SEARCH_RADIUS_EXP = "Radius around activity location in which agents looks for available chargers [m]";
+
+    public static final String REFERENCE_PARKING_DISTANCE = "referenceParkingDistance";
+    static final String REFERENCE_PARKING_DISTANCE_EXP = "Distance assumed to be the basline walking distance between a public parking space and the activity location without charging [m].";
 
     public static final String TRANSFERFINALSOCTONEXTITERATION = "transferFinalSoCToNextIteration";
     static final String TRANSFERFINALSOCTONEXTITERATION_EXP = "determines whether the resulting SoC at the end of the iteration X is set to be the initial SoC in iteration X+1 for each EV. If set to true, bear in mind that EV might start with 0% battery charge.";
@@ -140,7 +140,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     private int parkingSearchRadius = 500;
 
     @Positive
-    private double opportunityChargingShare = 0.02;
+    private int referenceParkingDistance = 200;
 
     // Replanning
 
@@ -184,7 +184,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(PARKING_SEARCH_RADIUS, PARKING_SEARCH_RADIUS_EXP);
         map.put(DEFAULT_RANGE_ANXIETY_THRESHOLD, DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP);
         map.put(MAXNUMBERSIMULTANEOUSPLANCHANGES, MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP);
-        map.put(OPPORTUNITY_CHARGING_SHARE, OPPORTUNITY_CHARGING_SHARE_EXP);
         map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
         map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
         map.put(FORCE_KEEP_NTH_ITERATION, FORCE_KEEP_NTH_ITERATION_EXP);
@@ -198,6 +197,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(TRANSFERFINALSOCTONEXTITERATION, TRANSFERFINALSOCTONEXTITERATION_EXP);
         map.put(OPTIMAL_SOC, OPTIMAL_SOC_EXP);
         map.put(BATTERY_HEALTH_STRESS_UTILITY, BATTERY_HEALTH_STRESS_UTILITY_EXP);
+        map.put(REFERENCE_PARKING_DISTANCE, REFERENCE_PARKING_DISTANCE_EXP);
         return map;
     }
 
@@ -270,15 +270,15 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public void setParkingSearchRadius(int parkingSearchRadius) {
         this.parkingSearchRadius = parkingSearchRadius;
     }
-
-    @StringGetter(OPPORTUNITY_CHARGING_SHARE)
-    public double getOpportunityChargingShare() {
-        return opportunityChargingShare;
+    
+    @StringGetter(REFERENCE_PARKING_DISTANCE)
+    public int getReferenceParkingDistance() {
+        return referenceParkingDistance;
     }
 
-    @StringSetter(OPPORTUNITY_CHARGING_SHARE)
-    public void setOpportunityChargingShare(double opportunityChargingShare) {
-        this.opportunityChargingShare = opportunityChargingShare;
+    @StringSetter(REFERENCE_PARKING_DISTANCE)
+    public void setReferenceParkingDistance(int referenceParkingDistance) {
+        this.referenceParkingDistance = referenceParkingDistance;
     }
 
     @StringGetter(FAILED_OPPORTUNITY_CHARGING_UTILITY)

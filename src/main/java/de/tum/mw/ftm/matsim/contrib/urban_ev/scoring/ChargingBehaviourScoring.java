@@ -84,7 +84,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
                 else if(soc<params.optimalSOC&&soc>0)
                 {
-                    double epsilon = 0.01;
+                    double epsilon = 0.001;
 
                     // range anxiety
                     delta_score = params.utilityOfEmptyBattery * Math.exp(Math.log(epsilon)*(soc/params.optimalSOC));
@@ -116,8 +116,9 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                 
                 // punish walking distance if
-                // a person charges and has to walk (i.e. does not use a private charger) and is not a person that charges publicly at home due to not having a private charger at home
-                if (walkingDistance>0) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
+                // a person charges and has to walk longer than the assumed baseline distance 
+                // and is not a person that charges publicly at home due to not having a private charger at home
+                if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
                     
                     // inverted utility based on Geurs, van Wee 2004 Equation (1)
                     double beta = 0.005;
