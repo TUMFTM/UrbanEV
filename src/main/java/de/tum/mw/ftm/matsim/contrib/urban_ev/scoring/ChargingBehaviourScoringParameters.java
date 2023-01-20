@@ -15,7 +15,8 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
     public final double marginalUtilityOfStationHogging;
     public final double optimalSOC;
     public final double batteryHealthStressUtility;
-    public final int referenceParkingDistance;
+    public final double parkingSearchRadius;
+    public final double referenceParkingDistance;
 
     private ChargingBehaviourScoringParameters(
             final double marginalUtilityOfRangeAnxiety_soc,
@@ -27,7 +28,8 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             final double marginalUtilityOfStationHogging,
             final double optimalSOC,
             final double batteryHealthStressUtility,
-            final int referenceParkingDistance) {
+            final double parkingSearchRadius,
+            final double referenceParkingDistance) {
         this.marginalUtilityOfRangeAnxiety_soc = marginalUtilityOfRangeAnxiety_soc;
         this.utilityOfEmptyBattery = utilityOfEmptyBattery;
         this.marginalUtilityOfWalking_m = marginalUtilityOfWalking_m;
@@ -37,6 +39,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         this.marginalUtilityOfStationHogging = marginalUtilityOfStationHogging;
         this.batteryHealthStressUtility = batteryHealthStressUtility;
         this.optimalSOC = optimalSOC;
+        this.parkingSearchRadius = parkingSearchRadius;
         this.referenceParkingDistance = referenceParkingDistance;
     }
 
@@ -50,7 +53,8 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         private double marginalUtilityOfStationHogging;
         private double optimalSOC;
         private double batteryHealthStressUtility;
-        private int referenceParkingDistance;
+        private double parkingSearchRadius;
+        private double referenceParkingDistance;
 
         public Builder(final Scenario scenario) {
             this((UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev"));
@@ -66,6 +70,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             marginalUtilityOfStationHogging = configGroup.getStationHoggingUtility();
             optimalSOC = configGroup.getOptimalSOC();
             batteryHealthStressUtility = configGroup.getBatteryHealthStressUtility();
+            parkingSearchRadius = configGroup.getParkingSearchRadius();
             referenceParkingDistance = configGroup.getReferenceParkingDistance();
         }
 
@@ -80,6 +85,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
                     marginalUtilityOfStationHogging,
                     optimalSOC,
                     batteryHealthStressUtility,
+                    parkingSearchRadius,
                     referenceParkingDistance
             );
         }

@@ -137,10 +137,10 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     // Charging parameters
     @Positive
-    private int parkingSearchRadius = 500;
+    private double parkingSearchRadius = 500;
 
     @Positive
-    private int referenceParkingDistance = 200;
+    private double referenceParkingDistance = 200;
 
     // Replanning
 
@@ -262,22 +262,22 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     }
 
     @StringGetter(PARKING_SEARCH_RADIUS)
-    public int getParkingSearchRadius() {
+    public double getParkingSearchRadius() {
         return parkingSearchRadius;
     }
 
     @StringSetter(PARKING_SEARCH_RADIUS)
-    public void setParkingSearchRadius(int parkingSearchRadius) {
+    public void setParkingSearchRadius(double parkingSearchRadius) {
         this.parkingSearchRadius = parkingSearchRadius;
     }
     
     @StringGetter(REFERENCE_PARKING_DISTANCE)
-    public int getReferenceParkingDistance() {
+    public double getReferenceParkingDistance() {
         return referenceParkingDistance;
     }
 
     @StringSetter(REFERENCE_PARKING_DISTANCE)
-    public void setReferenceParkingDistance(int referenceParkingDistance) {
+    public void setReferenceParkingDistance(double referenceParkingDistance) {
         this.referenceParkingDistance = referenceParkingDistance;
     }
 

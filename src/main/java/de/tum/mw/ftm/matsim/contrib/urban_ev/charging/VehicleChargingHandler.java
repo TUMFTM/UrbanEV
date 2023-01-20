@@ -82,7 +82,7 @@ public class VehicleChargingHandler
 	private final Network network;
 	private final ElectricFleet electricFleet;
 	private final Population population;
-	private final int parkingSearchRadius;
+	private final double parkingSearchRadius;
 	private final double hoggingExemptionHourStart;
 	private final double hoggingExemptionHourStop;
 	private final double hoggingThresholdMinutes;
