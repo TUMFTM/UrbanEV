@@ -151,7 +151,7 @@ public class VehicleChargingHandler
 					// Select public charger if no private charger is available
 					if(selectedCharger == null)
 					{
-						selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.RANDOMOFCLOSEST);
+						selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.CLOSEST);
 					}
 					
 					// Start charging if possible
