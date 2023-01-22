@@ -30,6 +30,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String LAST_ACT_IDENTIFIER = " end";
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
+    private static final double logn_residual_utility = Math.log(0.001);
     
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
     
@@ -84,10 +85,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
                 else if(soc<params.optimalSOC&&soc>0)
                 {
-                    double epsilon = 0.001;
-
                     // range anxiety
-                    delta_score = params.utilityOfEmptyBattery * Math.exp(Math.log(epsilon)*(soc/params.optimalSOC));
+                    delta_score = params.utilityOfEmptyBattery * Math.exp(logn_residual_utility*(soc/params.optimalSOC));
 
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
@@ -121,8 +120,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
                     
                     // inverted utility based on Geurs, van Wee 2004 Equation (1)
-                    double beta = 0.005;
-                    double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(-beta * walkingDistance));
+                    double additionalWalkingThroughCharging = walkingDistance-params.referenceParkingDistance;
+                    double additionalWalkingMaxCase = params.parkingSearchRadius-params.referenceParkingDistance;
+                    
+                    double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(logn_residual_utility * (additionalWalkingThroughCharging/additionalWalkingMaxCase)));
+                    
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.WALKING_DISTANCE, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.WALKING_DISTANCE, personId);
                     score += delta_score;                
