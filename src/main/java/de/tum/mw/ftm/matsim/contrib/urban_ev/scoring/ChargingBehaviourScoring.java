@@ -216,21 +216,21 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 Activity act = (Activity) pe;
                 String actType = act.getType();
                 
-                if(
-                    ((!actType.contains("home")&&!actType.contains("work")&&!actType.equals(""))||actType.contains("work_related"))
-                    &&
-                    actType.contains(CHARGING_IDENTIFIER)
-                    &&
-                    !actType.contains("failed")
-                    &&
-                    !actType.contains(LAST_ACT_IDENTIFIER)
-                    )
+                boolean isSuccessfulCharging = actType.contains(CHARGING_IDENTIFIER) && !actType.contains("failed");
+
+                if(isSuccessfulCharging)
                 {
-                    // plan contains a successful opportunity charging activity in case there is a charging activity that
-                    // is non-home, non-work, did not fail and is not the last activity
-                    planContainsSuccessfulOpportunityCharging = true;
-                    break;
-                    
+                    boolean isPrivateHomeCharging = actType.contains("home") && hasChargerAtHome;
+                    boolean isWorkCharging = actType.contains("work") && !actType.contains("work_related");
+                    boolean isPrivateWorkCharging = isWorkCharging && hasChargerAtWork;
+
+                    if(!isPrivateHomeCharging && !isPrivateWorkCharging)
+                    {
+                        // plan contains a successful opportunity charging activity in case there is a charging activity that
+                        // is non-home, non-work, did not fail and is not the last activity
+                        planContainsSuccessfulOpportunityCharging = true;
+                        break;
+                    }
                 }
                 
             }
