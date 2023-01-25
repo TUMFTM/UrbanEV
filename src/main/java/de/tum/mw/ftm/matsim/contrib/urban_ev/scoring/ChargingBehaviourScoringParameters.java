@@ -14,6 +14,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
     public final double failedOpportunityChargingUtility;
     public final double marginalUtilityOfStationHogging;
     public final double optimalSOC;
+    public final double criticalSOCThreshold;
     public final double batteryHealthStressUtility;
     public final double parkingSearchRadius;
     public final double referenceParkingDistance;
@@ -27,6 +28,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             final double failedOpportunityChargingUtility,
             final double marginalUtilityOfStationHogging,
             final double optimalSOC,
+            final double criticalSOCThreshold,
             final double batteryHealthStressUtility,
             final double parkingSearchRadius,
             final double referenceParkingDistance) {
@@ -39,6 +41,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         this.marginalUtilityOfStationHogging = marginalUtilityOfStationHogging;
         this.batteryHealthStressUtility = batteryHealthStressUtility;
         this.optimalSOC = optimalSOC;
+        this.criticalSOCThreshold = criticalSOCThreshold;
         this.parkingSearchRadius = parkingSearchRadius;
         this.referenceParkingDistance = referenceParkingDistance;
     }
@@ -52,6 +55,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         private double failedOpportunityChargingUtility;
         private double marginalUtilityOfStationHogging;
         private double optimalSOC;
+        private double criticalSOCThreshold;
         private double batteryHealthStressUtility;
         private double parkingSearchRadius;
         private double referenceParkingDistance;
@@ -69,6 +73,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             failedOpportunityChargingUtility = configGroup.getFailedOpportunityChargingUtility();
             marginalUtilityOfStationHogging = configGroup.getStationHoggingUtility();
             optimalSOC = configGroup.getOptimalSOC();
+            criticalSOCThreshold = configGroup.getCriticalSOCThreshold();
             batteryHealthStressUtility = configGroup.getBatteryHealthStressUtility();
             parkingSearchRadius = configGroup.getParkingSearchRadius();
             referenceParkingDistance = configGroup.getReferenceParkingDistance();
@@ -84,6 +89,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
                     failedOpportunityChargingUtility,
                     marginalUtilityOfStationHogging,
                     optimalSOC,
+                    criticalSOCThreshold,
                     batteryHealthStressUtility,
                     parkingSearchRadius,
                     referenceParkingDistance

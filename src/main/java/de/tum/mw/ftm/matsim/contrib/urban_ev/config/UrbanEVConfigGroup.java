@@ -29,8 +29,8 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     private static final String SOC_DIFFERENCE_UTILITY = "socDifferenceUtility";
     static final String SOC_DIFFERENCE_UTILITY_EXP = "[utils] utility for difference between start and end soc";
 
-    public static final String DEFAULT_RANGE_ANXIETY_THRESHOLD = "defaultRangeAnxietyThreshold";
-    static final String DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP = "Default threshold for scoring. Set person attribute to overwrite. [0.0-1.0]";
+    public static final String CRITICAL_SOC_THRESHOLD = "criticalSOCThreshold";
+    static final String CRITICAL_SOC_THRESHOLD_EXP = "Threshold under which an SOC is considered to be critical. [0.0-1.0]";
 
     public static final String FAILED_OPPORTUNITY_CHARGING_UTILITY = "failedOpportunityChargingUtility";
     static final String FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP = "[utils] utility for missing to engage in opportunity charging if flagged for opportunity charging.";
@@ -112,7 +112,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     private double failedOpportunityChargingUtility = -10;
 
     @Positive
-    private double defaultRangeAnxietyThreshold = 0.2;
+    private double criticalSOCThreshold = 0.2;
 
     @NotNull
     private String vehicleTypesFile = null;
@@ -182,7 +182,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(SOC_DIFFERENCE_UTILITY, SOC_DIFFERENCE_UTILITY_EXP);
         map.put(VEHICLE_TYPES_FILE, VEHICLE_TYPES_FILE_EXP);
         map.put(PARKING_SEARCH_RADIUS, PARKING_SEARCH_RADIUS_EXP);
-        map.put(DEFAULT_RANGE_ANXIETY_THRESHOLD, DEFAULT_RANGE_ANXIETY_THRESHOLD_EXP);
+        map.put(CRITICAL_SOC_THRESHOLD, CRITICAL_SOC_THRESHOLD_EXP);
         map.put(MAXNUMBERSIMULTANEOUSPLANCHANGES, MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP);
         map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
         map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
@@ -241,14 +241,14 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(SOC_DIFFERENCE_UTILITY)
     public void setSocDifferenceUtility(double socDifferenceUtility) { this.socDifferenceUtility = socDifferenceUtility; }
 
-    @StringGetter(DEFAULT_RANGE_ANXIETY_THRESHOLD)
-    public double getDefaultRangeAnxietyThreshold() {
-        return defaultRangeAnxietyThreshold;
+    @StringGetter(CRITICAL_SOC_THRESHOLD)
+    public double getCriticalSOCThreshold() {
+        return criticalSOCThreshold;
     }
 
-    @StringSetter(DEFAULT_RANGE_ANXIETY_THRESHOLD)
-    public void setDefaultRangeAnxietyThreshold(double defaultRangeAnxietyThreshold) {
-        this.defaultRangeAnxietyThreshold = defaultRangeAnxietyThreshold;
+    @StringSetter(CRITICAL_SOC_THRESHOLD)
+    public void setCriticalSOCThreshold(double criticalSOCThreshold) {
+        this.criticalSOCThreshold = criticalSOCThreshold;
     }
 
     @StringGetter(VEHICLE_TYPES_FILE)

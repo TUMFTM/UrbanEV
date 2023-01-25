@@ -95,8 +95,8 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	@Inject
 	private Config config;
 
-	@Inject
-	private UrbanEVConfigGroup urbanEVConfig;
+	// @Inject
+	// private UrbanEVConfigGroup urbanEVConfig;
 
 	public void addMobsimScopeHandler(MobsimScopeEventHandler handler) {
 		eventHandlers.add(handler);
@@ -110,11 +110,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 		lastIteration = config.controler().getLastIteration();
 
         population.getPersons().forEach((personId, person) -> {
-			
-			// add default range anxiety threshold to person attributes if none given
-			if (person.getAttributes().getAttribute("rangeAnxietyThreshold") == null) {
-				person.getAttributes().putAttribute("rangeAnxietyThreshold", String.valueOf(urbanEVConfig.getDefaultRangeAnxietyThreshold()));
-			}
 			
 			// Add home and work chargers if necessary
 			double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;

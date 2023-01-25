@@ -34,7 +34,6 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
     
-    private final double rangeAnxietyThreshold;
     private final Id<Person> personId;
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
@@ -49,8 +48,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.params = params;
         this.person = person;
         String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
-        this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
-        this.rangeAnxietyThreshold = Double.parseDouble(person.getAttributes().getAttribute("rangeAnxietyThreshold").toString());
+        this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false;
         this.hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
         this.hasChargerAtWork = person.getAttributes().getAttribute("workChargerPower") != null;
         this.personId =  person.getId();
@@ -91,7 +89,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                     chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
                     chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
                     
-                    if(soc<=rangeAnxietyThreshold)
+                    if(soc<=params.criticalSOCThreshold)
                     {
                         // Add all critical agents to the criticalSOC subpopulation such that they get replanned
                         person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
