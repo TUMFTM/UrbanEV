@@ -57,17 +57,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         // retrieve relevant person characteristics
         Person person = plan.getPerson();
         Attributes personAttributes = person.getAttributes();
-        double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
-        double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
+
+        double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? ((Double) personAttributes.getAttribute("homeChargerPower")).doubleValue() : 0.0;
+		double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? ((Double) personAttributes.getAttribute("workChargerPower")).doubleValue() : 0.0;
         String subpopulation = personAttributes.getAttribute("subpopulation").toString();
-        String opportunityCharging_str = personAttributes.getAttribute("opportunityCharging").toString();
-        Boolean opportunityCharging = opportunityCharging_str.equals("true") ? true : false; 
+        boolean opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
 
         // derived person characteristics
-        Boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
-        Boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
-        Boolean personHasPrivateCharger = personHasHomeCharger || personHasWorkCharger;
-        Boolean personCriticalSOC = subpopulation.equals(CRITICAL_SOC_IDENTIFIER);      
+        boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
+        boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
+        boolean personHasPrivateCharger = personHasHomeCharger || personHasWorkCharger;
+        boolean personCriticalSOC = subpopulation.equals(CRITICAL_SOC_IDENTIFIER);      
 
         // person plan analysis
         HashMap<Integer, Activity> acts = getActivities(plan);

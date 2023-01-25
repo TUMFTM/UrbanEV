@@ -112,8 +112,8 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
         population.getPersons().forEach((personId, person) -> {
 			
 			// Add home and work chargers if necessary
-			double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
-			double workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
+			double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? ((Double) person.getAttributes().getAttribute("homeChargerPower")).doubleValue() : 0.0;
+			double workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? ((Double) person.getAttributes().getAttribute("workChargerPower")).doubleValue() : 0.0;
 
 			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
 			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
@@ -168,14 +168,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 					.build();
 
 			chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
-
-			// Also add the corresponding person attribute in case it was not set by the config
-			if(activityType.contains("home")){
-				person.getAttributes().putAttribute("homeChargerPower", String.valueOf(power));
-			}
-			else{
-				person.getAttributes().putAttribute("workChargerPower", String.valueOf(power));
-			}
 		}
 			
 	}

@@ -33,7 +33,7 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         Double startSoc,
         Double walkingDistance,
         Double pluggedDuration, 
-        Boolean hogging,
+        boolean hogging,
         ScoreTrigger scoreTrigger        
         ) 
     {

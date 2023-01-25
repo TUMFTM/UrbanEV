@@ -225,7 +225,7 @@ public class VehicleChargingHandler
 				double pluggedDuration = event.getTime()-plugInTS;
 				
 				// Determine whether hogging is an issue
-				Boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
+				boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
 
 				// Issue a charging behaviour scoring event
 				// Needed to score the charging process itself 

@@ -11,6 +11,7 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.scoring.SumScoringFunction;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 
 public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEventScoring {
 
@@ -47,10 +48,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person) {
         this.params = params;
         this.person = person;
-        String opportunityCharging_str = person.getAttributes().getAttribute("opportunityCharging").toString();
-        this.opportunityCharging = opportunityCharging_str.equals("true") ? true : false;
-        this.hasChargerAtHome = person.getAttributes().getAttribute("homeChargerPower") != null;
-        this.hasChargerAtWork = person.getAttributes().getAttribute("workChargerPower") != null;
+        Attributes personAttributes = person.getAttributes();
+        this.opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
+        
+        this.hasChargerAtHome = personAttributes.getAttribute("homeChargerPower") != null;
+        this.hasChargerAtWork = personAttributes.getAttribute("workChargerPower") != null;
         this.personId =  person.getId();
     }
 
