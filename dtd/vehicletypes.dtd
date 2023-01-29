@@ -5,25 +5,11 @@
         <!ELEMENT type EMPTY>
 
         <!-- name - type name -->
+        <!-- battery_capacity - vehicle battery capacity in kWh -->
         <!-- consumption - vehicle energy consumption in kWh per 100 km -->
         <!-- max_charging_rate - maximum c-rate during charging -->
-        <!-- weight - vehicle weight in kg -->
-        <!-- width - vehicle width in m -->
-        <!-- height - vehicle height in m -->
-        <!-- length - vehicle length in m -->
-        <!-- cw - aerodynamic drag coefficient -->
-        <!-- ft - rolling drag coefficient -->
-        <!-- cb - inertia resistance coefficient -->
-        <!-- spr - efficiency of vehicle drive train -->
         <!ATTLIST type
-                name CDATA #REQUIRED
+                name CDATA #REQUIRED 
+                battery_capacity CDATA #REQUIRED
                 consumption CDATA #REQUIRED
-                max_charging_rate CDATA #REQUIRED
-                mass CDATA #REQUIRED
-                width CDATA #REQUIRED
-                height CDATA #REQUIRED
-                length CDATA #REQUIRED
-                cw CDATA #REQUIRED
-                ft CDATA #REQUIRED
-                cb CDATA #REQUIRED
-                spr CDATA #REQUIRED>
+                max_charging_rate CDATA #REQUIRED>
