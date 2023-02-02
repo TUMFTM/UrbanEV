@@ -61,10 +61,12 @@ public class IndividualSocTimeProfileCollectorProvider implements Provider<Mobsi
 		return new TimeProfileCollector(calc, 300, "individual_soc_time_profiles", matsimServices);
 	}
 
-	private static final int MAX_VEHICLE_COLUMNS = 10;
-
 	public static ProfileCalculator createIndividualSocCalculator(final ElectricFleet evFleet) {
-		int columns = Math.min(evFleet.getElectricVehicles().size(), MAX_VEHICLE_COLUMNS);
+
+		// Todo: Make this configurable via config. In the meantime: Always write all soc time profiles
+		int max_vehicles = evFleet.getElectricVehicles().size();
+
+		int columns = Math.min(evFleet.getElectricVehicles().size(), max_vehicles);
 		List<ElectricVehicle> allEvs = new ArrayList<>();
 		allEvs.addAll(evFleet.getElectricVehicles().values());
 		Collections.shuffle(allEvs);

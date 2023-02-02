@@ -48,21 +48,23 @@ public class EvStatsModule extends AbstractModule {
 		installQSimModule(new AbstractQSimModule() {
 			@Override
 			protected void configureQSim() {
-				if (evCfg.getTimeProfiles()) {
-					addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
+				
+				addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
 							SocHistogramTimeProfileCollectorProvider.class);
-					// addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
-					// 		IndividualSocTimeProfileCollectorProvider.class);
+				addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
+								ChargerOccupancyTimeProfileCollectorProvider.class);
+				addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
+								ChargerTypeOccupancyTimeProfileCollectorProvider.class);
+				addQSimComponentBinding(EvModule.EV_COMPONENT).to(EvMobsimListener.class);
+				bind(ChargerPowerCollector.class).asEagerSingleton();
+				bind(ChargerOccupancyHistoryCollector.class).asEagerSingleton();
+
+				if (evCfg.getTimeProfiles()) {	
 					addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
-							ChargerOccupancyTimeProfileCollectorProvider.class);
-					addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
-							ChargerTypeOccupancyTimeProfileCollectorProvider.class);
+							IndividualSocTimeProfileCollectorProvider.class);
 					// addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(ChargerOccupancyXYDataProvider.class);
 					// addQSimComponentBinding(EvModule.EV_COMPONENT).toProvider(
 					// 		VehicleTypeAggregatedSocTimeProfileCollectorProvider.class);
-					addQSimComponentBinding(EvModule.EV_COMPONENT).to(EvMobsimListener.class);
-					bind(ChargerPowerCollector.class).asEagerSingleton();
-					bind(ChargerOccupancyHistoryCollector.class).asEagerSingleton();
 					// add more time profiles if necessary
 				}
 			}
