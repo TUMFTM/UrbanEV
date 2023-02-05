@@ -195,18 +195,20 @@ public class VehicleChargingHandler
 	public void handleEvent(ActivityEndEvent event) {
 
 		String actType = event.getActType();
-		
+		Id<Person> personId = event.getPersonId();
+		Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
+		ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
+		double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
+		double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+		double time = event.getTime();
+
 		// If the last activity included charging
 		if (actType.endsWith(CHARGING_IDENTIFIER)) {
-
-			Id<Person> personId = event.getPersonId();
-			Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
 
 			// If the vehicle is currently plugged in
 			if(vehiclesAtChargers.containsKey(evId))
 			{
 				Person person = population.getPersons().get(personId);
-				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
 
 				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
 				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
@@ -216,11 +218,8 @@ public class VehicleChargingHandler
 				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
 				double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
 
-				unplugVehicle(evId, event.getTime());
-
-				double time = event.getTime();
-				double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
-				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
+				unplugVehicle(evId, event.getTime());	
+				
 				double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
 				double pluggedDuration = event.getTime()-plugInTS;
 				
@@ -243,6 +242,23 @@ public class VehicleChargingHandler
 						)
 					);
 			}
+		}
+		else
+		{
+			// if there was no charging start, scoring anyways
+			eventsManager.processEvent(
+					new ChargingBehaviourScoringEvent(
+						time,
+						personId,
+						actType,
+						socUponDeparture,
+						startSoc,
+						0.0,
+						0.0,
+						false,
+						ScoreTrigger.ACTIVITYEND
+						)
+					);
 		}
 
 	}

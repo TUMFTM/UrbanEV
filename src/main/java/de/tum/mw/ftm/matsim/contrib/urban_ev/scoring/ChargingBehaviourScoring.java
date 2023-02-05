@@ -78,23 +78,22 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
                 double soc = chargingBehaviourScoringEvent.getSoc();
 
-                // soc-dependent scoring components
-                if(scoreTrigger == ScoreTrigger.ACTIVITYSTART || scoreTrigger == ScoreTrigger.ACTIVITYEND)
+                // punish empty battery at any chance
+                if(soc==0 && (scoreTrigger == ScoreTrigger.ACTIVITYSTART || scoreTrigger == ScoreTrigger.ACTIVITYEND))
                 {
-                    if(soc==0)
-                    {
-                        score += scoreEmptyBattery(soc);
-                    }
-                    else if(soc<params.optimalSOC&&soc>0)
-                    {
-                        score += scoreRangeAnxiety(soc);
-                    }
+                    score += scoreEmptyBattery(soc);
                 }
-                
-                // score battery stress after charging
-                if(scoreTrigger == ScoreTrigger.ACTIVITYEND && soc>params.optimalSOC)
+
+                // punish battery health stress after any charging activity
+                if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
                 {
                     score += scoreBatteryHealth(soc);
+                }
+
+                // punish range anxiety after any activity
+                if(soc>0.0 && soc<= params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND)
+                {
+                    score += scoreRangeAnxiety(soc);
                 }
 
                 // scoring of location choices
