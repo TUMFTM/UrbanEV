@@ -31,8 +31,9 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private static final String CHARGING_IDENTIFIER = " charging";
     private static final String LAST_ACT_IDENTIFIER = " end";
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
-    private static final double logn_residual_utility = Math.log(0.001);
-    
+    private static final double logn_residual_utility_walking = Math.log(0.001);
+    private static final double logn_residual_utility_rangeAnxiety = Math.log(0.00001);
+
     private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
     
     private final Id<Person> personId;
@@ -46,14 +47,20 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
     @Inject
     public ChargingBehaviourScoring(final ChargingBehaviourScoringParameters params, Person person) {
+        
+        // scoring params
         this.params = params;
+        
+        // person 
+        this.personId =  person.getId();
         this.person = person;
+
+        // person attributes
         Attributes personAttributes = person.getAttributes();
         this.opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
-        
         this.hasChargerAtHome = personAttributes.getAttribute("homeChargerPower") != null;
         this.hasChargerAtWork = personAttributes.getAttribute("workChargerPower") != null;
-        this.personId =  person.getId();
+        
     }
 
     @Override
@@ -61,141 +68,179 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
         if(event instanceof ChargingBehaviourScoringEvent){
         
+            // parse event
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
-            double soc = chargingBehaviourScoringEvent.getSoc();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
-            ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
-
-            // soc-dependent scoring components at activity start
-            if (scoreTrigger == ScoreTrigger.ACTIVITYSTART)
+            
+            // make sure this is not called on unspecified/ini activities
+            if(!activityType.equals(""))
             {
-                
-                double delta_score = 0.0;
+                ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
+                double soc = chargingBehaviourScoringEvent.getSoc();
 
-                if(soc==0)
+                // soc-dependent scoring components
+                if(scoreTrigger == ScoreTrigger.ACTIVITYSTART || scoreTrigger == ScoreTrigger.ACTIVITYEND)
                 {
-                    // empty battery
-                    delta_score = params.utilityOfEmptyBattery;
-                    
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.EMPTY_BATTERY, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.EMPTY_BATTERY, personId);
-                    
-                    // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-                    person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
-                }
-                else if(soc<params.optimalSOC&&soc>0)
-                {
-                    // range anxiety
-                    delta_score = params.utilityOfEmptyBattery * Math.exp(logn_residual_utility*(soc/params.optimalSOC));
-
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.RANGE_ANXIETY, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.RANGE_ANXIETY, personId);
-                    
-                    if(soc<=params.criticalSOCThreshold)
+                    if(soc==0)
                     {
-                        // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-                        person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+                        score += scoreEmptyBattery(soc);
+                    }
+                    else if(soc<params.optimalSOC&&soc>0)
+                    {
+                        score += scoreRangeAnxiety(soc);
                     }
                 }
-                else
-                {
-                    // battery health (soc>params.optimalSOC)
-                    delta_score = ((soc-params.optimalSOC)/(1.0-params.optimalSOC))*params.batteryHealthStressUtility;
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.BATTERY_HEALTH, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.BATTERY_HEALTH, personId);
-                }
-
-                score += delta_score;
-
-            }
-
-            // scoring of location choices
-            if(scoreTrigger == ScoreTrigger.ACTIVITYSTART && activityType.contains(CHARGING_IDENTIFIER))
-            {
-                double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                 
-                // punish walking distance if
-                // a person charges and has to walk longer than the assumed baseline distance 
-                // and is not a person that charges publicly at home due to not having a private charger at home
-                if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
-                    
-                    // inverted utility based on Geurs, van Wee 2004 Equation (1)
-                    double additionalWalkingThroughCharging = walkingDistance-params.referenceParkingDistance;
-                    double additionalWalkingMaxCase = params.parkingSearchRadius-params.referenceParkingDistance;
-                    
-                    double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(logn_residual_utility * (additionalWalkingThroughCharging/additionalWalkingMaxCase)));
-                    
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.WALKING_DISTANCE, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.WALKING_DISTANCE, personId);
-                    score += delta_score;                
-                }
-
-                // reward charging at home
-                if (hasChargerAtHome&&activityType.contains("home")) {
-                    double delta_score = params.utilityOfHomeCharging;
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.HOME_CHARGING, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.HOME_CHARGING, personId);
-                    score += delta_score;
-                }
-
-            }
-
-
-            // Scoring of charging hogging
-            if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
-            {
-                                
-                if(
-                    chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
-                    !((activityType.contains("home") && hasChargerAtHome) || ((activityType.contains("work") && !activityType.contains("work_related")) && hasChargerAtWork)) // and charging was performed publicly
-                    ) 
+                // score battery stress after charging
+                if(scoreTrigger == ScoreTrigger.ACTIVITYEND && soc>params.optimalSOC)
                 {
-                    double delta_score = params.marginalUtilityOfStationHogging;
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.STATION_HOGGING, delta_score);
-                    chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.STATION_HOGGING, personId);
-                    score += delta_score;
+                    score += scoreBatteryHealth(soc);
                 }
+
+                // scoring of location choices
+                if(scoreTrigger == ScoreTrigger.ACTIVITYSTART && activityType.contains(CHARGING_IDENTIFIER))
+                {
+                    double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                     
+                    // punish walking distance if
+                    // a person charges and has to walk longer than the assumed baseline distance 
+                    // and is not a person that charges publicly at home due to not having a private charger at home
+                    if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
+                        score += scoreWalking(walkingDistance);                
+                    }
+
+                    // reward charging at home
+                    if (hasChargerAtHome&&activityType.contains("home")) {
+                        score += scoreHomeCharging();
+                    }
+
+                }
+
+
+                // Scoring of charging hogging
+                if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
+                {
+                                    
+                    if(
+                        chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
+                        !((activityType.contains("home") && hasChargerAtHome) || ((activityType.contains("work") && !activityType.contains("work_related")) && hasChargerAtWork)) // and charging was performed publicly
+                        ) 
+                    {
+                        score += scoreStationHogging();
+                    }
+                        
+                }
+                
+                // Scoring on last activity
+                if (activityType.contains(LAST_ACT_IDENTIFIER))
+                {
+                    score += scoreEnergyBalance(soc, chargingBehaviourScoringEvent.getStartSoc());
+
+                    if(opportunityCharging && !successfulOpportunityCharging(person)){
+                        score += scoreOpportunityCharging();
+                    }
+
+                }
             }
             
-            // Scoring on last activity
-            if (activityType.contains(LAST_ACT_IDENTIFIER))
-            {
-                // Calculate SOC difference
-                Double soc_diff =  soc - chargingBehaviourScoringEvent.getStartSoc();
-                if(soc_diff<=0){
-                    // Only punish soc difference if SOC is smaller than at the beginning of the cycle.
-                    double delta_score = params.marginalUtilityOfSocDifference * Math.abs(soc_diff);
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.ENERGY_BALANCE, delta_score);
-                    score += delta_score;
-                } else
-                {
-                    chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.ENERGY_BALANCE, 0);
-                }
-                chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.ENERGY_BALANCE, personId);
-
-                double delta_score = 0;
-
-                if(!opportunityCharging){
-                    delta_score=0;
-                }
-                else{
-                    if(!successfulOpportunityCharging(person)){
-                        // agent failed to opportunity charge even though it should have
-                        delta_score = params.failedOpportunityChargingUtility;
-                        chargingBehaviorScoresCollector.addScoringComponentValue(ScoreComponents.OPPORTUNITY_CHARGING, delta_score);
-                        chargingBehaviorScoresCollector.addScoringPerson(ScoreComponents.OPPORTUNITY_CHARGING, personId);
-                        score += delta_score;
-                    }
-                    else{
-                        // person successfully performed opportunity charging
-                        delta_score=0;
-                    }
-                }
-
-            }
         }
         
+    }
+
+    private void collectScores(ScoreComponents type, double delta_score, Id<Person> personId)
+    {
+        chargingBehaviorScoresCollector.addScoringComponentValue(type, delta_score);
+        chargingBehaviorScoresCollector.addScoringPerson(type, personId);
+    }
+
+    private double scoreWalking(double walkingDistance)
+    {
+
+        // inverted utility based on Geurs, van Wee 2004 Equation (1)
+        double additionalWalkingThroughCharging = walkingDistance-params.referenceParkingDistance;
+        double additionalWalkingMaxCase = params.parkingSearchRadius-params.referenceParkingDistance;
+        
+        double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(logn_residual_utility_walking * (additionalWalkingThroughCharging/additionalWalkingMaxCase)));
+        
+        collectScores(ScoreComponents.WALKING_DISTANCE, delta_score, personId);
+        
+        return delta_score;
+    }
+
+    private double scoreHomeCharging()
+    {
+        // reward charging at home
+        double delta_score = params.utilityOfHomeCharging;
+        collectScores(ScoreComponents.HOME_CHARGING, delta_score, personId);
+
+        return delta_score;
+    }
+
+    private double scoreStationHogging()
+    {
+        double delta_score = params.marginalUtilityOfStationHogging;
+        collectScores(ScoreComponents.STATION_HOGGING, delta_score, personId);
+
+        return delta_score;
+    }
+
+    private double scoreEnergyBalance(double soc, double startSoc)
+    {
+        // Calculate SOC difference
+        double soc_diff =  Math.abs(soc - startSoc);
+        double delta_score = params.marginalUtilityOfSocDifference * Math.abs(soc_diff);
+        
+        collectScores(ScoreComponents.ENERGY_BALANCE, delta_score, personId);
+        
+        return delta_score;
+    }
+
+    private double scoreBatteryHealth(double soc)
+    {
+
+        // battery health (soc>params.optimalSOC)
+        double delta_score = ((soc-params.optimalSOC)/(1.0-params.optimalSOC))*params.batteryHealthStressUtility;
+        collectScores(ScoreComponents.BATTERY_HEALTH, delta_score, personId);
+        
+        return delta_score;
+
+    }
+
+    private double scoreRangeAnxiety(double soc)
+    {
+
+        // range anxiety
+        double delta_score = params.utilityOfEmptyBattery * Math.exp(logn_residual_utility_rangeAnxiety*(soc/params.optimalSOC));
+        collectScores(ScoreComponents.RANGE_ANXIETY, delta_score, personId);
+        
+        if(soc<=params.criticalSOCThreshold)
+        {
+            // Add all critical agents to the criticalSOC subpopulation such that they get replanned
+            person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+        }
+        
+        return delta_score; 
+    }
+
+    private double scoreEmptyBattery(double soc)
+    {
+        // empty battery
+        double delta_score = params.utilityOfEmptyBattery;
+        collectScores(ScoreComponents.EMPTY_BATTERY, delta_score, personId);
+            
+        // Add all critical agents to the criticalSOC subpopulation such that they get replanned
+        person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+
+        return delta_score;
+    }
+
+    private double scoreOpportunityCharging()
+    {
+        // agent failed to opportunity charge even though it should have
+        double delta_score = params.failedOpportunityChargingUtility;   
+        collectScores(ScoreComponents.OPPORTUNITY_CHARGING, delta_score, personId);
+        
+        return delta_score;
     }
 
     @Override public void finish() {}
