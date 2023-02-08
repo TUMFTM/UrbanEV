@@ -61,7 +61,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? ((Double) personAttributes.getAttribute("homeChargerPower")).doubleValue() : 0.0;
 		double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? ((Double) personAttributes.getAttribute("workChargerPower")).doubleValue() : 0.0;
         String subpopulation = personAttributes.getAttribute("subpopulation").toString();
-        boolean opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
 
         // derived person characteristics
         boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
@@ -154,11 +153,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
                     if(!homeActsWithCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEHOME);
                     if(!workActsWithCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEWORK);
-
-                    // Remove other charging activity only if
-                    // A: the person is not flagged for opportunity charging and has other charging activities
-                    // B: the person is flagged for opportunity charging and has more than one other charging activity left
-                    if((!opportunityCharging&&!otherActsWithCharging.isEmpty())||(opportunityCharging&&otherActsWithCharging.size()>1)) viableChanges.add(ChargingStrategyChange.REMOVEOTHER);
+                    if(!otherActsWithCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEOTHER);
 
                     if(!otherActsWithCharging.isEmpty()&&!otherActsWithoutCharging.isEmpty()) viableChanges.add(ChargingStrategyChange.REMOVEOTHER_ADDOTHER);
 
