@@ -161,8 +161,8 @@ public class VehicleChargingHandler
 						walkingDistance = DistanceUtils.calculateDistance(
 								activityCoord, selectedCharger.getCoord());
 					} else {
-						// if no charger was found, mark as failed attempt in plan
-						if (activity != null) {
+						// if no charger was found, mark as failed attempt in plan if not already marked
+						if (activity != null && !activity.getType().contains("failed")) {
 							actType = activity.getType() + " failed";
 							activity.setType(actType);
 						}
