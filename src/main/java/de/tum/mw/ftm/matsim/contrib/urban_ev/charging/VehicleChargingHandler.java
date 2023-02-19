@@ -41,6 +41,8 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.ChargingInfrastructure;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -51,7 +53,6 @@ import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.contrib.util.PartialSort;
@@ -131,7 +132,7 @@ public class VehicleChargingHandler
 
 				if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
 					
-					Activity activity = getActivity(person, event.getTime());
+					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
 					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
 					// Location choice
@@ -212,7 +213,7 @@ public class VehicleChargingHandler
 
 				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
 				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-				Activity activity = getActivity(person, event.getTime());
+				Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
 				Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
 				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
@@ -268,42 +269,6 @@ public class VehicleChargingHandler
 	//	// vehiclesAtChargers.remove(event.getVehicleId());
 	//	// Charging has ended before activity ends
 	// }
-
-	/**
-	 * gets ativity from agent's plan by looking for current time
-	 * @param person
-	 * @param time
-	 * @return
-	 */
-	private Activity getActivity(Person person, double time){
-		Activity activity = null;
-		List<PlanElement> planElements = person.getSelectedPlan().getPlanElements();
-		for (int i = 0; i < planElements.size(); i++) {
-			PlanElement planElement = planElements.get(i);
-			if (planElement instanceof Activity) {
-				if (((Activity) planElement).getEndTime().isDefined()) {
-					double activityEndTime = ((Activity) planElement).getEndTime().seconds();
-					if (activityEndTime >= time || i == planElements.size() - 1) {
-						activity = ((Activity) planElement);
-						break;
-					}
-				}
-				else if (i == planElements.size() - 1) {
-					// Accept a missing end time for the last activity of a plan
-					activity = ((Activity) planElement);
-					break;
-				}
-				else{
-					// There is a missing end time for an activity that is not the plan's last -> This should end in null being returned
-					continue;
-				}
-			}
-		}
-		if (activity != null) {
-			return activity;
-		}
-		else return null;
-	}
 
 	/**
 	 * Tries to find the closest free chargers of fitting type in vicinity of activity location
