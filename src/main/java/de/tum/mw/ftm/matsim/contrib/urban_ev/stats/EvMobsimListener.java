@@ -266,65 +266,30 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 			if(curIteration==0) {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.CREATE), CSVFormat.DEFAULT.withDelimiter(';').withHeader(
 						"iterationNumber",
-						"sumRangeAnxiety",
-						"rangeAnxietyScoringPersons",
-						"meanRangeAnxiety",
-						"sumEmptyBattery",
-						"emptyBatteryScoringPersons",
-						"meanEmptyBattery",
-						"sumWalkingDistance",
-						"walkingDistanceScoringPersons",
-						"meanWalkingDistance",
-						"sumHomeCharging",
-						"homeChargingScoringPersons",
-						"meanHomeCharging",
-						"sumEnergyBalance",
-						"energyBalanceScoringPersons",
-						"meanEnergyBalance",
-						"sumOpportunityCharging",
-						"opportunityChargingScoringPersons",
-						"meanOpportunityCharging",
-						"sumStationHogging",
-						"stationHoggingScoringPersons",
-						"meanStationHogging",
-						"sumBatteryHealth",
-						"batteryHealthScoringPersons",
-						"meanBatteryHealth"
+						"personId",
+						"time",
+						"scoreComponent",
+						"value"
 				));
 			} else {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.APPEND), CSVFormat.DEFAULT.withDelimiter(';'));
 			}
 
+			for(ChargingScoreLogEntry logEntry : chargingBehaviorScoresCollector.getScoringHistory())
+			{
+				csvPrinter.printRecord(
+				Integer.toString(curIteration),
+				logEntry.getPersonId().toString(),
+				Double.toString(logEntry.getTime()),
+				logEntry.getScoreComponent().toString(),
+				Double.toString(logEntry.getValue())
+				);
+			}
 
-			csvPrinter.printRecord(
-					Integer.toString(curIteration),																															// iteration number
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 								// sum RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 		// number of persons scoring RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 								// mean RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 								// sum EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 		// number of persons scoring EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 								// mean EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 							// sum WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 		// number of persons scoring WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 							// mean WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 								// sum HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 		// number of persons scoring HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 								// mean HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 								// sum ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 		// number of persons scoring ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// mean ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 						// sum OPPORTUNITY_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 	// number of persons scoring OPPORTUNITY_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.OPPORTUNITY_CHARGING)), 						// mean OPPORTUNITY_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 							// sum STATION_HOGGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 		// number of persons scoring STATION_HOGGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.STATION_HOGGING)), 							// mean STATION_HOGGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)), 								// sum BATTERY_HEALTH
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)), 		// number of persons scoring BATTERY_HEALTH
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.BATTERY_HEALTH)) 								// mean BATTERY_HEALTH
-			);
+			// Free space for new iteration
+			ChargingBehaviorScoresCollector.getInstance().reset();
 
-
+			// Housekeeping
 			csvPrinter.close();
 		}
 		catch (RuntimeException e){

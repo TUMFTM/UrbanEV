@@ -70,6 +70,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         
             // parse event
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
+            double time = chargingBehaviourScoringEvent.getTime();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
             
             // make sure this is not called on unspecified/ini activities
@@ -81,19 +82,19 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 // punish empty battery at any chance
                 if(soc==0 && (scoreTrigger == ScoreTrigger.ACTIVITYSTART || scoreTrigger == ScoreTrigger.ACTIVITYEND))
                 {
-                    score += scoreEmptyBattery(soc);
+                    score += scoreEmptyBattery(soc,time);
                 }
 
                 // punish battery health stress after any charging activity
                 if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
                 {
-                    score += scoreBatteryHealth(soc);
+                    score += scoreBatteryHealth(soc,time);
                 }
 
                 // punish range anxiety after any activity
                 if(soc>0.0 && soc<= params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND)
                 {
-                    score += scoreRangeAnxiety(soc);
+                    score += scoreRangeAnxiety(soc,time);
                 }
 
                 // scoring of location choices
@@ -105,12 +106,12 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                     // a person charges and has to walk longer than the assumed baseline distance 
                     // and is not a person that charges publicly at home due to not having a private charger at home
                     if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
-                        score += scoreWalking(walkingDistance);                
+                        score += scoreWalking(walkingDistance,time);                
                     }
 
                     // reward charging at home
                     if (hasChargerAtHome&&activityType.contains("home")) {
-                        score += scoreHomeCharging();
+                        score += scoreHomeCharging(time);
                     }
 
                 }
@@ -125,7 +126,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                         !((activityType.contains("home") && hasChargerAtHome) || ((activityType.contains("work") && !activityType.contains("work_related")) && hasChargerAtWork)) // and charging was performed publicly
                         ) 
                     {
-                        score += scoreStationHogging();
+                        score += scoreStationHogging(time);
                     }
                         
                 }
@@ -133,10 +134,10 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 // Scoring on last activity
                 if (activityType.contains(LAST_ACT_IDENTIFIER))
                 {
-                    score += scoreEnergyBalance(soc, chargingBehaviourScoringEvent.getStartSoc());
+                    score += scoreEnergyBalance(soc, chargingBehaviourScoringEvent.getStartSoc(),time);
 
                     if(opportunityCharging && !successfulOpportunityCharging(person)){
-                        score += scoreOpportunityCharging();
+                        score += scoreOpportunityCharging(time);
                     }
 
                 }
@@ -146,13 +147,16 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         
     }
 
-    private void collectScores(ScoreComponents type, double delta_score, Id<Person> personId)
+    private void collectScores(Id<Person> personId, double time, ScoreComponents scoreComponent, double value)
     {
-        chargingBehaviorScoresCollector.addScoringComponentValue(type, delta_score);
-        chargingBehaviorScoresCollector.addScoringPerson(type, personId);
+        ChargingBehaviorScoresCollector.getInstance().collect(
+            personId,
+            time,
+            scoreComponent,
+            value);
     }
 
-    private double scoreWalking(double walkingDistance)
+    private double scoreWalking(double walkingDistance, double time)
     {
 
         // inverted utility based on Geurs, van Wee 2004 Equation (1)
@@ -161,56 +165,56 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         
         double delta_score = params.marginalUtilityOfWalking_m * (1 - Math.exp(logn_residual_utility_walking * (additionalWalkingThroughCharging/additionalWalkingMaxCase)));
         
-        collectScores(ScoreComponents.WALKING_DISTANCE, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.WALKING_DISTANCE, delta_score);
         
         return delta_score;
     }
 
-    private double scoreHomeCharging()
+    private double scoreHomeCharging(double time)
     {
         // reward charging at home
         double delta_score = params.utilityOfHomeCharging;
-        collectScores(ScoreComponents.HOME_CHARGING, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.HOME_CHARGING, delta_score);
 
         return delta_score;
     }
 
-    private double scoreStationHogging()
+    private double scoreStationHogging(double time)
     {
         double delta_score = params.marginalUtilityOfStationHogging;
-        collectScores(ScoreComponents.STATION_HOGGING, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.STATION_HOGGING, delta_score);
 
         return delta_score;
     }
 
-    private double scoreEnergyBalance(double soc, double startSoc)
+    private double scoreEnergyBalance(double soc, double startSoc, double time)
     {
         // Calculate SOC difference
         double soc_diff =  Math.abs(soc - startSoc);
         double delta_score = params.marginalUtilityOfSocDifference * Math.abs(soc_diff);
         
-        collectScores(ScoreComponents.ENERGY_BALANCE, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.ENERGY_BALANCE, delta_score);
         
         return delta_score;
     }
 
-    private double scoreBatteryHealth(double soc)
+    private double scoreBatteryHealth(double soc, double time)
     {
 
         // battery health (soc>params.optimalSOC)
         double delta_score = ((soc-params.optimalSOC)/(1.0-params.optimalSOC))*params.batteryHealthStressUtility;
-        collectScores(ScoreComponents.BATTERY_HEALTH, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.BATTERY_HEALTH, delta_score);
         
         return delta_score;
 
     }
 
-    private double scoreRangeAnxiety(double soc)
+    private double scoreRangeAnxiety(double soc, double time)
     {
 
         // range anxiety
         double delta_score = params.utilityOfEmptyBattery * Math.exp(logn_residual_utility_rangeAnxiety*(soc/params.optimalSOC));
-        collectScores(ScoreComponents.RANGE_ANXIETY, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.RANGE_ANXIETY, delta_score);
         
         if(soc<=params.criticalSOCThreshold)
         {
@@ -221,11 +225,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         return delta_score; 
     }
 
-    private double scoreEmptyBattery(double soc)
+    private double scoreEmptyBattery(double soc, double time)
     {
         // empty battery
         double delta_score = params.utilityOfEmptyBattery;
-        collectScores(ScoreComponents.EMPTY_BATTERY, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.EMPTY_BATTERY, delta_score);
             
         // Add all critical agents to the criticalSOC subpopulation such that they get replanned
         person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
@@ -233,11 +237,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         return delta_score;
     }
 
-    private double scoreOpportunityCharging()
+    private double scoreOpportunityCharging(double time)
     {
         // agent failed to opportunity charge even though it should have
         double delta_score = params.failedOpportunityChargingUtility;   
-        collectScores(ScoreComponents.OPPORTUNITY_CHARGING, delta_score, personId);
+        collectScores(personId, time, ScoreComponents.OPPORTUNITY_CHARGING, delta_score);
         
         return delta_score;
     }
