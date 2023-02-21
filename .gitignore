@@ -43,3 +43,12 @@ RunOFTVis.java
 *.rar
 *.tar
 *.zip
+
+# Unused files #
+############
+# These files may come into play later
+# So far they are likely to be used in local tests 
+dtd/config_v2.dtd
+dtd/electric_vehicles_v1.dtd
+dtd/network_v2.dtd
+dtd/population_v6.dtd
