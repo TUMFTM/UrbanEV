@@ -305,51 +305,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
     }
 
-    private HashMap<Integer, Activity> getActivities(Plan plan){
-
-		HashMap<Integer, Activity> activityMap = new HashMap<>();
-
-        List<PlanElement> plan_elements = plan.getPlanElements();
-        int N_plan_elements = plan_elements.size();
-
-		for(int i=0; i<N_plan_elements; i++){
-
-            PlanElement pe = plan_elements.get(i);
-
-			if (pe instanceof Activity) {
-
-				activityMap.put(i, (Activity) pe);
-				
-			}
-		
-		}
-		return activityMap;
-	}
-
-    private HashMap<Integer, Activity> getActsFromHashMapContainsType(HashMap<Integer, Activity> hashmap_in, String actType)
-    {
-        return new HashMap<>(
-            hashmap_in.entrySet().stream().filter(actEntry -> actEntry.getValue().getType().contains(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
-    }
-
-    private HashMap<Integer, Activity> getActsFromHashMapNotContainsType(HashMap<Integer, Activity> hashmap_in, String actType)
-    {
-        return new HashMap<>(hashmap_in.entrySet().stream().filter(actEntry -> !actEntry.getValue().getType().contains(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
-    }
-
-    private HashMap<Integer, Activity> getActsFromHashMapNotEqualsType(HashMap<Integer, Activity> hashmap_in, String actType)
-    {
-        return new HashMap<>(hashmap_in.entrySet().stream().filter(actEntry -> !actEntry.getValue().getType().equals(actType)).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
-    }
-
-    private Integer getRandomKey(HashMap<Integer, Activity> hashmap_in)
-    {
-        Random random = new Random();
-        Integer randomKey = (Integer) hashmap_in.keySet().toArray()[random.nextInt(hashmap_in.keySet().toArray().length)];
-
-        return randomKey;
-    }
-
     private Activity getRandomActivity(List<Activity> activities)
     {
         return activities.get(random.nextInt(activities.size()));
