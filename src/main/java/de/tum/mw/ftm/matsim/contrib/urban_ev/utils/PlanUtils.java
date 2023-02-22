@@ -20,11 +20,33 @@ public class PlanUtils {
         
     }
 
-    public static List<Activity> getChargingActivities(Plan plan){
-        return getActivities(plan)
-        .stream()
-        .filter(a -> a.getType().contains("charging"))
-        .collect(Collectors.toList());
+	public static List<Activity> getActivityTypeContains(List<Activity> activities, String type){
+		return activities
+		.stream()
+		.filter(a -> a.getType().contains(type))
+		.collect(Collectors.toList());
+	}
+
+	public static List<Activity> getActivityTypeNotEquals(List<Activity> activities, String type){
+		return activities
+		.stream()
+		.filter(a -> !a.getType().equals(type))
+		.collect(Collectors.toList());
+	}
+
+	public static List<Activity> getActivityTypeNotContains(List<Activity> activities, String type){
+		return activities
+		.stream()
+		.filter(a -> !a.getType().contains(type))
+		.collect(Collectors.toList());
+	}
+
+    public static List<Activity> getChargingActivities(List<Activity> activities){
+        return getActivityTypeContains(activities, "charging");
+    }
+
+	public static List<Activity> getNonChargingActivities(List<Activity> activities){
+        return getActivityTypeNotContains(activities, "charging");
     }
 
     /**

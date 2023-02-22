@@ -1,6 +1,8 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.planning;
 
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
+
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
@@ -8,7 +10,7 @@ import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -16,7 +18,6 @@ import java.util.stream.Collectors;
 public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
     private static final String CHARGING_IDENTIFIER = " charging";
-    private static final String CHARGING_FAILED_IDENTIFIER = " charging failed";
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
     private static final String NON_CRITICAL_SOC_IDENTIFIER = "nonCriticalSOC";
 
@@ -69,55 +70,57 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         boolean personCriticalSOC = subpopulation.equals(CRITICAL_SOC_IDENTIFIER);      
 
         // person plan analysis
-        HashMap<Integer, Activity> acts = getActivities(plan);
-        HashMap<Integer, Activity> nonStartOrEndActs = getActsFromHashMapNotEqualsType(getActsFromHashMapNotContainsType(acts, "end"),"");
-        HashMap<Integer, Activity> homeActs = getActsFromHashMapContainsType(nonStartOrEndActs, "home");
-        HashMap<Integer, Activity> workOrWorkRelatedActs = getActsFromHashMapContainsType(nonStartOrEndActs, "work");
-        HashMap<Integer, Activity> workActs = getActsFromHashMapNotContainsType(workOrWorkRelatedActs, "work_related");
-        HashMap<Integer, Activity> otherActs = new HashMap<>(nonStartOrEndActs.entrySet().stream().filter(actEntry -> !homeActs.containsKey(actEntry.getKey())&&!workActs.containsKey(actEntry.getKey())).collect(Collectors.toMap(e->e.getKey(),e->e.getValue())));
+        List<Activity> activities = PlanUtils.getActivities(plan);
+        List<Activity> nonStartOrEndActs = PlanUtils.getActivityTypeNotEquals(PlanUtils.getActivityTypeNotContains(activities, "end"), "");
+
+
+        List<Activity> homeActs = PlanUtils.getActivityTypeContains(nonStartOrEndActs, "home");
+        List<Activity> workActs = PlanUtils.getActivityTypeNotContains(PlanUtils.getActivityTypeContains(nonStartOrEndActs, "work"), "work_related");
+        List<Activity> otherActs = nonStartOrEndActs.stream().filter(a -> !homeActs.contains(a) & !workActs.contains(a)).collect(Collectors.toList());
 
         // Apply plan changes
         for (int c = 0; c < numberOfChanges; c++) {
 
             // first, analyze current charging behavior
-            HashMap<Integer, Activity> allChargingActs = getActsFromHashMapContainsType(nonStartOrEndActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> noChargingActs = getActsFromHashMapNotContainsType(nonStartOrEndActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> failedChargingActs = getActsFromHashMapContainsType(allChargingActs, CHARGING_FAILED_IDENTIFIER);
-            HashMap<Integer, Activity> successfulChargingActs = getActsFromHashMapNotContainsType(allChargingActs, CHARGING_FAILED_IDENTIFIER);
+            List<Activity> allChargingActs = PlanUtils.getChargingActivities(nonStartOrEndActs);
+            List<Activity> noChargingActs = PlanUtils.getNonChargingActivities(nonStartOrEndActs);
 
-            HashMap<Integer, Activity> homeActsWithCharging = getActsFromHashMapContainsType(homeActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> workActsWithCharging = getActsFromHashMapContainsType(workActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> otherActsWithCharging = getActsFromHashMapContainsType(otherActs, CHARGING_IDENTIFIER);
+            List<Activity> failedChargingActs = PlanUtils.getActivityTypeContains(allChargingActs, "failed");
+            List<Activity> successfulChargingActs = PlanUtils.getActivityTypeNotContains(allChargingActs, "failed");
 
-            HashMap<Integer, Activity> homeActsWithoutCharging = getActsFromHashMapNotContainsType(homeActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> workActsWithoutCharging = getActsFromHashMapNotContainsType(workActs, CHARGING_IDENTIFIER);
-            HashMap<Integer, Activity> otherActsWithoutCharging = getActsFromHashMapNotContainsType(otherActs, CHARGING_IDENTIFIER);
+            List<Activity> homeActsWithCharging = PlanUtils.getChargingActivities(homeActs);
+            List<Activity> workActsWithCharging = PlanUtils.getChargingActivities(workActs);
+            List<Activity> otherActsWithCharging = PlanUtils.getChargingActivities(otherActs);
+
+            List<Activity> homeActsWithoutCharging = PlanUtils.getNonChargingActivities(homeActs);
+            List<Activity> workActsWithoutCharging = PlanUtils.getNonChargingActivities(workActs);
+            List<Activity> otherActsWithoutCharging = PlanUtils.getNonChargingActivities(otherActs);
 
             // Remove failed charging activities
-            failedChargingActs.forEach((idx, act) -> {act.setType(act.getType().replace(" failed", ""));});
+            failedChargingActs.forEach((act) -> {act.setType(act.getType().replace(" failed", ""));});
 
             if(personCriticalSOC){
 
                 // If the person has a critical soc, add a charging activity
                 if(personHasHomeCharger & !homeActsWithoutCharging.isEmpty()){
                     // critical soc and home charger
-                    addChargingActivity(homeActsWithoutCharging);
+                    addRandomChargingActivity(homeActsWithoutCharging);
                 }
                 else if(personHasWorkCharger & !workActsWithoutCharging.isEmpty()){
                     // critical soc and work, but no home charger 
-                    addChargingActivity(workActsWithoutCharging);
+                    addRandomChargingActivity(workActsWithoutCharging);
                 }
                 else if(!homeActsWithoutCharging.isEmpty()){
                     // if the person has to charge publicly, charging close to home is still preferred
-                    addChargingActivity(homeActsWithoutCharging);
+                    addRandomChargingActivity(homeActsWithoutCharging);
                 }
                 else if(!workActsWithoutCharging.isEmpty()){
                     // if the person has to charge publicly but can not charge close to home, charging close to work is preferred
-                    addChargingActivity(workActsWithoutCharging);
+                    addRandomChargingActivity(workActsWithoutCharging);
                 }
                 else if(!otherActsWithoutCharging.isEmpty()){
                     // critical soc, but person can not charge close to home or work
-                    addChargingActivity(otherActsWithoutCharging); // Add charging activity to any activity without charging
+                    addRandomChargingActivity(otherActsWithoutCharging); // Add charging activity to any activity without charging
                 }
                 else{
                     ; // Todo: Handle these hopeless cases
@@ -182,47 +185,47 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
                         switch(randomAction) { // ...and execute it. If there are no viable actions the person should still be fine, because they are "uncritical" -> do not change anything
                             case REMOVEWORK_ADDHOME:
-                                changeChargingActivity(workActsWithCharging, homeActsWithoutCharging);
+                                changeRandomChargingActivity(workActsWithCharging, homeActsWithoutCharging);
                                 break;
                             case REMOVEHOME_ADDWORK:
                                 // Remove home, add work charging
-                                changeChargingActivity(homeActsWithCharging, workActsWithoutCharging);
+                                changeRandomChargingActivity(homeActsWithCharging, workActsWithoutCharging);
                                 break;
                             case REMOVEWORK_ADDWORK:
                                 // Remove work, add work
-                                changeChargingActivity(workActsWithCharging, workActsWithoutCharging);
+                                changeRandomChargingActivity(workActsWithCharging, workActsWithoutCharging);
                                 break;
                             case REMOVEHOME_ADDHOME:
                                 // Remove home, add home
-                                changeChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
+                                changeRandomChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
                                 break;
                             case ADDHOME: 
                                 // Add home
-                                addChargingActivity(homeActsWithoutCharging);
+                                addRandomChargingActivity(homeActsWithoutCharging);
                                 break;
                             case ADDWORK: 
                                 // Add work
-                                addChargingActivity(workActsWithoutCharging);
+                                addRandomChargingActivity(workActsWithoutCharging);
                                 break;
                             case ADDOTHER: 
                                 // Add other
-                                addChargingActivity(otherActsWithoutCharging);
+                                addRandomChargingActivity(otherActsWithoutCharging);
                                 break;
                             case REMOVEHOME:
                                 // Remove home
-                                removeChargingActivity(homeActsWithCharging);
+                                removeRandomChargingActivity(homeActsWithCharging);
                                 break;
                             case REMOVEWORK: 
                                 // Remove work
-                                removeChargingActivity(workActsWithCharging);
+                                removeRandomChargingActivity(workActsWithCharging);
                                 break;
                             case REMOVEOTHER: 
                                 // Remove other, add other
-                                removeChargingActivity(otherActsWithCharging);
+                                removeRandomChargingActivity(otherActsWithCharging);
                                 break;
                             case REMOVEOTHER_ADDOTHER: 
                                 // Remove other, add other
-                                changeChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
+                                changeRandomChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
                                 break;
                         }
                     }
@@ -237,17 +240,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
                     switch(random.nextInt(3)) {
                         case 0:
                             if(!noChargingActs.isEmpty()&&!allChargingActs.isEmpty()){
-                                changeChargingActivity(allChargingActs, noChargingActs);
+                                changeRandomChargingActivity(allChargingActs, noChargingActs);
                             }
                             break;
                         case 1:
                             if(!successfulChargingActs.isEmpty()){
-                                removeChargingActivity(allChargingActs);
+                                removeRandomChargingActivity(allChargingActs);
                             }
                             break;
                         case 2:
                             if(!noChargingActs.isEmpty()){
-                                addChargingActivity(noChargingActs);
+                                addRandomChargingActivity(noChargingActs);
                             }
                             break;
                     }
@@ -261,29 +264,39 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         setNonCriticalSubpopulation(person);
     }
 
-    private void addChargingActivity(HashMap<Integer, Activity> noChargingActs) {
+    private void addChargingActivity(Activity activity)
+    {
+        activity.setType(activity.getType() + CHARGING_IDENTIFIER);
+    }
+
+    private void removeChargingActivity(Activity activity)
+    {
+        activity.setType(activity.getType().replace(CHARGING_IDENTIFIER, ""));
+    }
+
+    private void addRandomChargingActivity(List<Activity> noChargingActs) {
         // select random activity without charging and change to activity with charging
         if (!noChargingActs.isEmpty()) {
             Activity selectedActivity = getRandomActivity(noChargingActs);
-            selectedActivity.setType(selectedActivity.getType() + CHARGING_IDENTIFIER);
+            addChargingActivity(selectedActivity);
         }
     }
 
-    private void removeChargingActivity(HashMap<Integer, Activity> successfulChargingActs) {
+    private void removeRandomChargingActivity(List<Activity> successfulChargingActs) {
         // select random activity with charging and change to activity without charging
         if (!successfulChargingActs.isEmpty()) {
             Activity selectedActivity = getRandomActivity(successfulChargingActs);
-            selectedActivity.setType(selectedActivity.getType().replace(CHARGING_IDENTIFIER, ""));
+            removeChargingActivity(selectedActivity);
         }
     }
 
-    private void changeChargingActivity(
-                                HashMap<Integer, Activity> chargingActs,
-                                HashMap<Integer, Activity> noChargingActs) {
+    private void changeRandomChargingActivity(
+                                List<Activity> chargingActs,
+                                List<Activity> noChargingActs) {
         // Change by subsequently removing and adding charging activities
         if (!chargingActs.isEmpty() && !noChargingActs.isEmpty()) {
-            removeChargingActivity(chargingActs);
-            addChargingActivity(noChargingActs);
+            removeRandomChargingActivity(chargingActs);
+            addRandomChargingActivity(noChargingActs);
         }
     }
 
@@ -337,9 +350,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         return randomKey;
     }
 
-    private Activity getRandomActivity(HashMap<Integer, Activity> hashmap_in)
+    private Activity getRandomActivity(List<Activity> activities)
     {
-        return hashmap_in.get(getRandomKey(hashmap_in));
+        return activities.get(random.nextInt(activities.size()));
     }
 
     private void setNonCriticalSubpopulation(Person person){
