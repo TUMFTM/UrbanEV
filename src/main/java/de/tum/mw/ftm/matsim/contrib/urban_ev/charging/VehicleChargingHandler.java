@@ -43,7 +43,6 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEve
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
 
-import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -69,11 +68,10 @@ import java.util.Random;
 
 public class VehicleChargingHandler
 		implements ActivityStartEventHandler, ActivityEndEventHandler,
-		MobsimScopeEventHandler {
+		MobsimScopeEventHandler//, 
+		//ChargingEndEventHandler 
+		{
 
-	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
-
-	public static final String CHARGING_IDENTIFIER = " charging";
 	public static final Integer SECONDS_PER_MINUTE = 60;
 	public static final Integer SECONDS_PER_HOUR = 60*SECONDS_PER_MINUTE;
 	public static final Integer SECONDS_PER_DAY = 24*SECONDS_PER_HOUR;
@@ -119,77 +117,67 @@ public class VehicleChargingHandler
 
 		String actType = event.getActType();
 		Id<Person> personId = event.getPersonId();
+		double walkingDistance = 0.0;
+		Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
+		ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
+		Person person = population.getPersons().get(personId);
+		Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
+		//chargingInfrastructure.getChargers().values().stream().map(c -> c.getLogic().getPluggedVehicles()).collect(Collectors.toList());
 
-		if (personId != null) {
+		if (PlanUtils.isCharging(activity)) {
+			
+			Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
-			Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
+			// Location choice
+			List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
+			Charger selectedCharger = null;
 
-			if (electricFleet.getElectricVehicles().containsKey(evId)) {
-				
-				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
-				Person person = population.getPersons().get(personId);
-				double walkingDistance = 0.0;
-
-				if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
-					
-					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
-					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
-
-					// Location choice
-					List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
-					Charger selectedCharger = null;
-
-					// Use private charger if possible
-					for(Charger charger : suitableChargers)
-					{
-						if (charger.getAllowedVehicles().contains(evId))
-						{
-							selectedCharger = charger;
-							break;
-						}
-					}
-
-					// Select public charger if no private charger is available
-					if(selectedCharger == null)
-					{
-						selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.CLOSEST);
-					}
-					
-					// Start charging if possible
-					if (selectedCharger != null) { // if charger was found, start charging
-						selectedCharger.getLogic().addVehicle(ev, event.getTime());
-						vehiclesAtChargers.put(evId, selectedCharger.getId());
-						walkingDistance = DistanceUtils.calculateDistance(
-								activityCoord, selectedCharger.getCoord());
-					} else {
-						// if no charger was found, mark as failed attempt in plan if not already marked
-						if (activity != null && !activity.getType().contains("failed")) {
-							actType = activity.getType() + " failed";
-							activity.setType(actType);
-						}
-					}
+			// Use private charger if possible
+			for(Charger charger : suitableChargers)
+			{
+				if (charger.getAllowedVehicles().contains(evId) && (actType.contains("home") || actType.contains("work")))
+				{
+					selectedCharger = charger;
+					break;
 				}
+			}
 
-				double time = event.getTime();
-				double socUponArrival = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
-				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
-
-				// Issue a charging behaviour scoring event
-				// Needed to score walking and catch empty or low soc after driving
-				eventsManager.processEvent(new ChargingBehaviourScoringEvent(
-					time,
-					personId,
-					actType,
-					socUponArrival,
-					startSoc,
-					walkingDistance,
-					0.0,
-					false,
-					ScoreTrigger.ACTIVITYSTART
-					)
-					);
+			// Select public charger if no private charger is available
+			if(selectedCharger == null)
+			{
+				selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.CLOSEST);
+			}
+			
+			// Start charging if possible
+			if (selectedCharger != null) { // if charger was found, start charging
+				selectedCharger.getLogic().addVehicle(ev, event.getTime());
+				vehiclesAtChargers.put(evId, selectedCharger.getId());
+				walkingDistance = DistanceUtils.calculateDistance(
+						activityCoord, selectedCharger.getCoord());
+			} else {
+				// if no charger was found, mark as failed attempt in plan if not already marked
+				PlanUtils.setFailed(activity);
 			}
 		}
+
+		double time = event.getTime();
+		double socUponArrival = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+		double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
+
+		// Issue a charging behaviour scoring event
+		// Needed to score walking and catch empty or low soc after driving
+		eventsManager.processEvent(new ChargingBehaviourScoringEvent(
+			time,
+			personId,
+			actType,
+			socUponArrival,
+			startSoc,
+			walkingDistance,
+			0.0,
+			false,
+			ScoreTrigger.ACTIVITYSTART
+			)
+			);
 	}
 
 	@Override
@@ -203,71 +191,57 @@ public class VehicleChargingHandler
 		double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 		double time = event.getTime();
 
-		// If the last activity included charging
-		if (actType.endsWith(CHARGING_IDENTIFIER)) {
+		// Initialize scoring information
+		boolean hogging = false; 
+		double walkingDistance = 0.0;
+		double pluggedDuration = 0.0;
 
-			// If the vehicle is currently plugged in
-			if(vehiclesAtChargers.containsKey(evId))
-			{
-				Person person = population.getPersons().get(personId);
-
-				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
-				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-				Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
-				Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
-
-				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
-				double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
-
-				unplugVehicle(evId, event.getTime());	
-				
-				double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
-				double pluggedDuration = event.getTime()-plugInTS;
-				
-				// Determine whether hogging is an issue
-				boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
-
-				// Issue a charging behaviour scoring event
-				// Needed to score the charging process itself 
-				eventsManager.processEvent(
-					new ChargingBehaviourScoringEvent(
-						time,
-						personId,
-						actType,
-						socUponDeparture,
-						startSoc,
-						walkingDistance,
-						pluggedDuration,
-						hogging,
-						ScoreTrigger.ACTIVITYEND
-						)
-					);
-			}
-		}
-		else
+		// If the vehicle is currently plugged in
+		if(vehiclesAtChargers.containsKey(evId))
 		{
-			// if there was no charging start, scoring anyways
-			eventsManager.processEvent(
-					new ChargingBehaviourScoringEvent(
-						time,
-						personId,
-						actType,
-						socUponDeparture,
-						startSoc,
-						0.0,
-						0.0,
-						false,
-						ScoreTrigger.ACTIVITYEND
-						)
-					);
+			Person person = population.getPersons().get(personId);
+
+			Id<Charger> chargerId = vehiclesAtChargers.get(evId);
+			Charger charger = chargingInfrastructure.getChargers().get(chargerId);
+			Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
+			Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
+
+			ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
+			double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
+
+			unplugVehicle(evId, event.getTime());	
+			
+			walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
+			pluggedDuration = event.getTime()-plugInTS;
+			
+			// Determine whether hogging is an issue
+			hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
 		}
+
+		// In any case, issue a charging behaviour scoring event
+		eventsManager.processEvent(
+			new ChargingBehaviourScoringEvent(
+				time,
+				personId,
+				actType,
+				socUponDeparture,
+				startSoc,
+				walkingDistance,
+				pluggedDuration,
+				hogging,
+				ScoreTrigger.ACTIVITYEND
+				)
+			);
 
 	}
 
 	// @Override
 	// public void handleEvent(ChargingEndEvent event) {
-	//	// vehiclesAtChargers.remove(event.getVehicleId());
-	//	// Charging has ended before activity ends
+	// 	if(vehiclesAtChargers.containsKey(event.getVehicleId()))
+	// 	{
+	// 		//Charging has ended before activity ends
+	// 		vehiclesAtChargers.remove(event.getVehicleId());
+	// 	}
 	// }
 
 	/**

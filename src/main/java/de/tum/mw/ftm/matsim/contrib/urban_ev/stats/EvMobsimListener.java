@@ -37,6 +37,8 @@ import com.google.inject.Inject;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.DriveDischargingHandler;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.matsim.api.core.v01.Id;
@@ -130,12 +132,12 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 					if(pe instanceof Activity)
 					{
 						Activity act = (Activity) pe;
-						if(act.getType().contains("charging"))
+						if(PlanUtils.isCharging(act))
 						{
-							String status = act.getType().contains("failed") ? "failed" : "success";
+							String status = PlanUtils.failed(act) ? "failed" : "success";
 							csvPrinter.printRecord(
 								person.getId().toString(),
-								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
+								act.getType(),
 								Double.toString(act.getCoord().getX()),
 								Double.toString(act.getCoord().getY()),
 								Double.toString(act.getEndTime().seconds()),

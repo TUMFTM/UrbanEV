@@ -4,11 +4,13 @@ import com.google.inject.Inject;
 
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.scoring.SumScoringFunction;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -28,18 +30,15 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
     private double score;
     
-    private static final String CHARGING_IDENTIFIER = " charging";
-    private static final String LAST_ACT_IDENTIFIER = " end";
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
     private static final double logn_residual_utility_walking = Math.log(0.001);
     private static final double logn_residual_utility_rangeAnxiety = Math.log(0.00001);
-
-    private ChargingBehaviorScoresCollector chargingBehaviorScoresCollector = ChargingBehaviorScoresCollector.getInstance();
     
     private final Id<Person> personId;
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
     private final boolean hasChargerAtWork;
+    private final double firstActivityEndTime;
     
 
     final ChargingBehaviourScoringParameters params;
@@ -60,7 +59,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
         this.hasChargerAtHome = personAttributes.getAttribute("homeChargerPower") != null;
         this.hasChargerAtWork = personAttributes.getAttribute("workChargerPower") != null;
-        
+        this.firstActivityEndTime = PlanUtils.getActivityTypeNotEquals(PlanUtils.getActivities(person.getSelectedPlan()),"").get(0).getEndTime().seconds();
     }
 
     @Override
@@ -71,11 +70,16 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             // parse event
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
             double time = chargingBehaviourScoringEvent.getTime();
-            String activityType = chargingBehaviourScoringEvent.getActivityType();
+            Plan plan = person.getSelectedPlan();
+            Activity activity = PlanUtils.getActivity(plan, time);
+            String activityType = activity.getType();
+            boolean isChargingEvent = PlanUtils.isCharging(activity);
             
             // make sure this is not called on unspecified/ini activities
-            if(!activityType.equals(""))
+            if(!PlanUtils.isIniAct(activity))
             {
+
+                boolean isFirstActivity = time<=this.firstActivityEndTime;
                 ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
                 double soc = chargingBehaviourScoringEvent.getSoc();
 
@@ -86,7 +90,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
                 // punish battery health stress after any charging activity
-                if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
+                if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && isChargingEvent && !isFirstActivity)
                 {
                     score += scoreBatteryHealth(soc,time);
                 }
@@ -98,7 +102,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
                 // scoring of location choices
-                if(scoreTrigger == ScoreTrigger.ACTIVITYSTART && activityType.contains(CHARGING_IDENTIFIER))
+                if(scoreTrigger == ScoreTrigger.ACTIVITYSTART && isChargingEvent && !isFirstActivity)
                 {
                     double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                     
@@ -116,9 +120,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
                 }
 
-
                 // Scoring of charging hogging
-                if(scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
+                if(scoreTrigger == ScoreTrigger.ACTIVITYEND && isChargingEvent)
                 {
                                     
                     if(
@@ -131,8 +134,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                         
                 }
                 
-                // Scoring on last activity
-                if (activityType.contains(LAST_ACT_IDENTIFIER))
+                // Scoring on last activity (this is automatically only performed once as it does not end)
+                if (PlanUtils.isEndAct(activity))
                 {
                     score += scoreEnergyBalance(soc, chargingBehaviourScoringEvent.getStartSoc(),time);
 
@@ -264,7 +267,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 Activity act = (Activity) pe;
                 String actType = act.getType();
                 
-                boolean isSuccessfulCharging = actType.contains(CHARGING_IDENTIFIER) && !actType.contains("failed");
+                boolean isSuccessfulCharging = PlanUtils.isCharging(act) && !actType.contains("failed");
 
                 if(isSuccessfulCharging)
                 {

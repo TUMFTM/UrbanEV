@@ -5,10 +5,54 @@ import java.util.stream.Collectors;
 
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.PlanElement;
 
 public class PlanUtils {
     
+	public static boolean parseBooleanActivityAttribute(Activity activity, String attr_name)
+	{
+		return ((Boolean)activity.getAttributes().getAttribute(attr_name)).booleanValue();
+	}
+
+	public static boolean isCharging(Activity activity)
+	{
+		return parseBooleanActivityAttribute(activity, "charging");
+	}
+
+	public static boolean isEndAct(Activity activity)
+	{
+		return parseBooleanActivityAttribute(activity, "end_act");
+	}
+
+	public static boolean isIniAct(Activity activity)
+	{
+		return parseBooleanActivityAttribute(activity, "ini_act");
+	}
+
+	public static boolean failed(Activity activity)
+	{
+		return parseBooleanActivityAttribute(activity, "failed");
+	}
+
+	public static void setCharging(Activity activity)
+	{
+		activity.getAttributes().putAttribute("charging", true);
+	}
+
+	public static void removeCharging(Activity activity)
+	{
+		activity.getAttributes().putAttribute("charging", false);
+	}
+
+	public static void setFailed(Activity activity)
+	{
+		activity.getAttributes().putAttribute("failed", true);
+	}
+
+	public static void removeFailed(Activity activity)
+	{
+		activity.getAttributes().putAttribute("failed", false);
+	}
+
     public static List<Activity> getActivities(Plan plan){
 
         return plan
@@ -42,11 +86,11 @@ public class PlanUtils {
 	}
 
     public static List<Activity> getChargingActivities(List<Activity> activities){
-        return getActivityTypeContains(activities, "charging");
+        return activities.stream().filter(a -> isCharging(a)).collect(Collectors.toList());
     }
 
 	public static List<Activity> getNonChargingActivities(List<Activity> activities){
-        return getActivityTypeNotContains(activities, "charging");
+        return activities.stream().filter(a -> !isCharging(a)).collect(Collectors.toList());
     }
 
     /**
@@ -56,34 +100,12 @@ public class PlanUtils {
 	 * @return
 	 */
     public static Activity getActivity(Plan plan, double time)
-    {
-        Activity activity = null;
-		List<PlanElement> planElements = plan.getPlanElements();
-		for (int i = 0; i < planElements.size(); i++) {
-			PlanElement planElement = planElements.get(i);
-			if (planElement instanceof Activity) {
-				if (((Activity) planElement).getEndTime().isDefined()) {
-					double activityEndTime = ((Activity) planElement).getEndTime().seconds();
-					if (activityEndTime >= time || i == planElements.size() - 1) {
-						activity = ((Activity) planElement);
-						break;
-					}
-				}
-				else if (i == planElements.size() - 1) {
-					// Accept a missing end time for the last activity of a plan
-					activity = ((Activity) planElement);
-					break;
-				}
-				else{
-					// There is a missing end time for an activity that is not the plan's last -> This should end in null being returned
-					continue;
-				}
-			}
-		}
-		if (activity != null) {
-			return activity;
-		}
-		else return null;
-    }
-
+    {	
+		List<Activity> all_acts = getActivities(plan);
+        return all_acts
+		.stream()
+		.filter(a -> a.getEndTime().isDefined() && a.getEndTime().seconds()>=time)
+		.findFirst()
+		.orElse(all_acts.get(all_acts.size()-1));
+	}
 }
