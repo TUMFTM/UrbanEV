@@ -55,35 +55,14 @@ public class PlanUtils {
 	 * @param time
 	 * @return
 	 */
-    public static Activity getActivity(Plan plan, double time)
-    {
-        Activity activity = null;
-		List<PlanElement> planElements = plan.getPlanElements();
-		for (int i = 0; i < planElements.size(); i++) {
-			PlanElement planElement = planElements.get(i);
-			if (planElement instanceof Activity) {
-				if (((Activity) planElement).getEndTime().isDefined()) {
-					double activityEndTime = ((Activity) planElement).getEndTime().seconds();
-					if (activityEndTime >= time || i == planElements.size() - 1) {
-						activity = ((Activity) planElement);
-						break;
-					}
-				}
-				else if (i == planElements.size() - 1) {
-					// Accept a missing end time for the last activity of a plan
-					activity = ((Activity) planElement);
-					break;
-				}
-				else{
-					// There is a missing end time for an activity that is not the plan's last -> This should end in null being returned
-					continue;
-				}
-			}
-		}
-		if (activity != null) {
-			return activity;
-		}
-		else return null;
-    }
+	public static Activity getActivity(Plan plan, double time)
+    {	
+		List<Activity> all_acts = getActivities(plan);
+        return all_acts
+		.stream()
+		.filter(a -> a.getEndTime().isDefined() && a.getEndTime().seconds()>=time)
+		.findFirst()
+		.orElse(all_acts.get(all_acts.size()-1));
+	}
 
 }
