@@ -8,9 +8,9 @@ import org.matsim.api.core.v01.population.*;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
 import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.core.gbl.MatsimRandom;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -21,7 +21,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
     private static final String NON_CRITICAL_SOC_IDENTIFIER = "nonCriticalSOC";
 
-    private Random random = new Random();
     private UrbanEVConfigGroup evCfg;
     private int maxNumberSimultaneousPlanChanges;
 
@@ -53,7 +52,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
     public void handlePlan(Plan plan) {
 
         // retrieve number of plan changes to apply
-        int numberOfChanges = 1 + random.nextInt(maxNumberSimultaneousPlanChanges);
+        int numberOfChanges = 1 + getRandomInt(maxNumberSimultaneousPlanChanges);
         
         // retrieve relevant person characteristics
         Person person = plan.getPerson();
@@ -181,7 +180,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
                     if(!viableChanges.isEmpty()) // If there are any viable actions...
                     {
-                        ChargingStrategyChange randomAction = viableChanges.get(random.nextInt(viableChanges.size())); // ...select a random action ...
+                        ChargingStrategyChange randomAction = viableChanges.get(getRandomInt(viableChanges.size())); // ...select a random action ...
 
                         switch(randomAction) { // ...and execute it. If there are no viable actions the person should still be fine, because they are "uncritical" -> do not change anything
                             case REMOVEWORK_ADDHOME:
@@ -237,7 +236,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
                     // Person has no private charger and is entirely reliant on public chargers
                     // -> Randomly change, remove, or add a charging activity with equal probability
 
-                    switch(random.nextInt(3)) {
+                    switch(getRandomInt(3)) {
                         case 0:
                             if(!noChargingActs.isEmpty()&&!allChargingActs.isEmpty()){
                                 changeRandomChargingActivity(allChargingActs, noChargingActs);
@@ -274,19 +273,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         activity.setType(activity.getType().replace(CHARGING_IDENTIFIER, ""));
     }
 
-    private void addRandomChargingActivity(List<Activity> noChargingActs) {
+    private void addRandomChargingActivity(List<Activity> potential_add_acts) {
         // select random activity without charging and change to activity with charging
-        if (!noChargingActs.isEmpty()) {
-            Activity selectedActivity = getRandomActivity(noChargingActs);
-            addChargingActivity(selectedActivity);
+        if (!potential_add_acts.isEmpty()) {
+            addChargingActivity(getRandomActivity(potential_add_acts));
         }
     }
 
-    private void removeRandomChargingActivity(List<Activity> successfulChargingActs) {
+    private void removeRandomChargingActivity(List<Activity> potential_remove_acts) {
         // select random activity with charging and change to activity without charging
-        if (!successfulChargingActs.isEmpty()) {
-            Activity selectedActivity = getRandomActivity(successfulChargingActs);
-            removeChargingActivity(selectedActivity);
+        if (!potential_remove_acts.isEmpty()) {
+            removeChargingActivity(getRandomActivity(potential_remove_acts));
         }
     }
 
@@ -305,9 +302,17 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
     }
 
+    private int getRandomInt(int max)
+    {
+        Random random = MatsimRandom.getLocalInstance();
+        random.setSeed(System.currentTimeMillis());
+        return random.nextInt(max);
+    }
+
     private Activity getRandomActivity(List<Activity> activities)
     {
-        return activities.get(random.nextInt(activities.size()));
+        
+        return activities.get(getRandomInt(activities.size()));
     }
 
     private void setNonCriticalSubpopulation(Person person){
