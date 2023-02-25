@@ -261,6 +261,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
         // Assume that the person belongs to the non-critical group after replanning
         setNonCriticalSubpopulation(person);
+
+        person.setSelectedPlan(plan);
+
     }
 
     private void addChargingActivity(Activity activity)
