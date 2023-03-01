@@ -134,6 +134,11 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
 			electricFleetWriter.write(Paths.get(controlerIO.getOutputPath(),"output_evehicles.xml").toString());
 		}
+		else
+		{
+			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
+			electricFleetWriter.write(Paths.get(controlerIO.getIterationFilename(iterationCounter.getIterationNumber(), "evehicles.xml")).toString());
+		}
 	}
 
 
