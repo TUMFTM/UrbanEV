@@ -144,9 +144,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     // Replanning
 
-    @Positive
-    private int maxNumberSimultaneousPlanChanges = 2;
-
     // DataIO
     @NotNull
     private boolean deleteIterationsOnTheFly = false;
@@ -183,7 +180,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(VEHICLE_TYPES_FILE, VEHICLE_TYPES_FILE_EXP);
         map.put(PARKING_SEARCH_RADIUS, PARKING_SEARCH_RADIUS_EXP);
         map.put(CRITICAL_SOC_THRESHOLD, CRITICAL_SOC_THRESHOLD_EXP);
-        map.put(MAXNUMBERSIMULTANEOUSPLANCHANGES, MAXNUMBERSIMULTANEOUSPLANCHANGES_EXP);
         map.put(FAILED_OPPORTUNITY_CHARGING_UTILITY, FAILED_OPPORTUNITY_CHARGING_UTILITY_EXP);
         map.put(DELETE_ITERATIONS_ON_THE_FLY, DELETE_ITERATIONS_ON_THE_FLY_EXP);
         map.put(FORCE_KEEP_NTH_ITERATION, FORCE_KEEP_NTH_ITERATION_EXP);
@@ -199,16 +195,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
         map.put(BATTERY_HEALTH_STRESS_UTILITY, BATTERY_HEALTH_STRESS_UTILITY_EXP);
         map.put(REFERENCE_PARKING_DISTANCE, REFERENCE_PARKING_DISTANCE_EXP);
         return map;
-    }
-
-    @StringGetter(MAXNUMBERSIMULTANEOUSPLANCHANGES)
-    public int getMaxNumberSimultaneousPlanChanges() {
-        return maxNumberSimultaneousPlanChanges;
-    }
-
-    @StringSetter(MAXNUMBERSIMULTANEOUSPLANCHANGES)
-    public void setMaxNumberSimultaneousPlanChanges(int maxNumberSimultaneousPlanChanges) {
-        this.maxNumberSimultaneousPlanChanges = maxNumberSimultaneousPlanChanges;
     }
 
     @StringGetter(RANGE_ANXIETY_UTILITY)
