@@ -40,6 +40,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
     private final boolean hasChargerAtWork;
+    private final boolean drivesPHEV;
     
 
     final ChargingBehaviourScoringParameters params;
@@ -60,6 +61,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.opportunityCharging = personAttributes.getAttribute("opportunityCharging") != null ? ((Boolean) personAttributes.getAttribute("opportunityCharging")).booleanValue() : false; 
         this.hasChargerAtHome = personAttributes.getAttribute("homeChargerPower") != null;
         this.hasChargerAtWork = personAttributes.getAttribute("workChargerPower") != null;
+        this.drivesPHEV = person.getAttributes().getAttribute("isPHEV") != null ? ((Boolean) personAttributes.getAttribute("isPHEV")).booleanValue() : false;
         
     }
 
@@ -86,13 +88,13 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
                 // punish battery health stress after any charging activity
-                if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER))
+                if(soc>params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && activityType.contains(CHARGING_IDENTIFIER) && !drivesPHEV)
                 {
                     score += scoreBatteryHealth(soc,time);
                 }
 
                 // punish range anxiety after any activity
-                if(soc>0.0 && soc<= params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND)
+                if(soc>0.0 && soc<= params.optimalSOC && scoreTrigger == ScoreTrigger.ACTIVITYEND && !drivesPHEV)
                 {
                     score += scoreRangeAnxiety(soc,time);
                 }
