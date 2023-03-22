@@ -203,46 +203,42 @@ public class VehicleChargingHandler
 		double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 		double time = event.getTime();
 
-		// If the last activity included charging
-		if (actType.endsWith(CHARGING_IDENTIFIER)) {
+		// If the vehicle is currently plugged in
+		if(vehiclesAtChargers.containsKey(evId))
+		{
+			Person person = population.getPersons().get(personId);
 
-			// If the vehicle is currently plugged in
-			if(vehiclesAtChargers.containsKey(evId))
-			{
-				Person person = population.getPersons().get(personId);
+			Id<Charger> chargerId = vehiclesAtChargers.get(evId);
+			Charger charger = chargingInfrastructure.getChargers().get(chargerId);
+			Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
+			Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
-				Id<Charger> chargerId = vehiclesAtChargers.get(evId);
-				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-				Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
-				Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
+			ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
+			double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
 
-				ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
-				double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
+			unplugVehicle(evId, event.getTime());	
+			
+			double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
+			double pluggedDuration = event.getTime()-plugInTS;
+			
+			// Determine whether hogging is an issue
+			boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
 
-				unplugVehicle(evId, event.getTime());	
-				
-				double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
-				double pluggedDuration = event.getTime()-plugInTS;
-				
-				// Determine whether hogging is an issue
-				boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
-
-				// Issue a charging behaviour scoring event
-				// Needed to score the charging process itself 
-				eventsManager.processEvent(
-					new ChargingBehaviourScoringEvent(
-						time,
-						personId,
-						actType,
-						socUponDeparture,
-						startSoc,
-						walkingDistance,
-						pluggedDuration,
-						hogging,
-						ScoreTrigger.ACTIVITYEND
-						)
-					);
-			}
+			// Issue a charging behaviour scoring event
+			// Needed to score the charging process itself 
+			eventsManager.processEvent(
+				new ChargingBehaviourScoringEvent(
+					time,
+					personId,
+					actType,
+					socUponDeparture,
+					startSoc,
+					walkingDistance,
+					pluggedDuration,
+					hogging,
+					ScoreTrigger.ACTIVITYEND
+					)
+				);
 		}
 		else
 		{
@@ -337,13 +333,12 @@ public class VehicleChargingHandler
 
 	private void unplugVehicle(Id<ElectricVehicle> evId, double time)
 	{
-		if (evId != null) {
-			Id<Charger> chargerId = vehiclesAtChargers.remove(evId);
-			if (chargerId != null) {
-				Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-				charger.getLogic().removeVehicle(electricFleet.getElectricVehicles().get(evId), time);
-			}
+		Id<Charger> chargerId = vehiclesAtChargers.remove(evId);
+		if (chargerId != null) {
+			Charger charger = chargingInfrastructure.getChargers().get(chargerId);
+			charger.getLogic().removeVehicle(electricFleet.getElectricVehicles().get(evId), time);
 		}
+		
 	}
 	
 	private double lastMidnight(double t)
