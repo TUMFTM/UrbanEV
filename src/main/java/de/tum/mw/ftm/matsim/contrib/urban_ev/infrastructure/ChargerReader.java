@@ -79,11 +79,13 @@ public class ChargerReader extends MatsimXmlParser {
 	}
 
 	private List<Id<ElectricVehicle>> getAllowedEvIds(Attributes attributes) {
-		List<Id<ElectricVehicle>> allowedEvIds = new ArrayList();
+		List<Id<ElectricVehicle>> allowedEvIds = new ArrayList<>();
 		if (attributes.getValue("allowed_vehicles") != null) {
-			String[] evIds = attributes.getValue("allowed_vehicles").split(",");
+			String[] evIds = attributes.getValue("allowed_vehicles").replace("[","").replace("]","").split(",");
 			for (String evId : evIds) {
-				allowedEvIds.add(Id.create(evId, ElectricVehicle.class));
+				if(!evId.isEmpty()){
+					allowedEvIds.add(Id.create(evId, ElectricVehicle.class));
+				}
 			}
 		}
 		return allowedEvIds;

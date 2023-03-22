@@ -29,16 +29,9 @@ email	:	lennart.adenaw@tum.de
 
 package de.tum.mw.ftm.matsim.contrib.urban_ev;
 
-import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.*;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.*;
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.contrib.ev.EvUnits;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -53,9 +46,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -106,18 +97,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	// Gets fired once in every MATSim run (multiple times when having initialization runs)
 	@Override
 	public void notifyStartup(StartupEvent startupEvent) {
-		 
-		lastIteration = config.controler().getLastIteration();
-
-        population.getPersons().forEach((personId, person) -> {
-			
-			// Add home and work chargers if necessary
-			double homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? ((Double) person.getAttributes().getAttribute("homeChargerPower")).doubleValue() : 0.0;
-			double workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? ((Double) person.getAttributes().getAttribute("workChargerPower")).doubleValue() : 0.0;
-
-			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
-			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
-        });
 
 		// Write final chargers to file
 		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
@@ -139,42 +118,6 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
 			electricFleetWriter.write(Paths.get(controlerIO.getIterationFilename(iterationCounter.getIterationNumber(), "evehicles.xml")).toString());
 		}
-	}
-
-
-	private void addPrivateCharger(Person person, String activityType, double power) {
-		String ownerId = person.getId().toString();
-		String chargerId = ownerId + "_" + activityType;
-		Coord actCoord = new Coord();
-		for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
-			if (planElement instanceof Activity) {
-				Activity act = (Activity) planElement;
-				if (act.getType().startsWith(activityType)) {
-					actCoord = act.getCoord();
-					break;
-				}
-			}
-		}
-
-		// Add a charger only if an activity with the corresponding activityType exists within the person's plans
-		if (actCoord.getX()!=0&&actCoord.getY()!=0){
-			String chargerType = ChargerSpecification.DEFAULT_CHARGER_TYPE;
-			int plugCount = ChargerSpecification.DEFAULT_PLUG_COUNT;
-			List<Id<ElectricVehicle>> allowedEvIds = new ArrayList<>();
-			allowedEvIds.add(Id.create(ownerId, ElectricVehicle.class));
-
-			ChargerSpecification chargerSpecification = ImmutableChargerSpecification.newBuilder()
-					.id(Id.create(chargerId, Charger.class))
-					.coord(new Coord(actCoord.getX(), actCoord.getY()))
-					.chargerType(chargerType)
-					.plugPower(EvUnits.kW_to_W(power))
-					.plugCount(plugCount)
-					.allowedVehicles(allowedEvIds)
-					.build();
-
-			chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
-		}
-			
 	}
 
 }
