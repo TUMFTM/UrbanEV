@@ -300,7 +300,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
     private int getRandomInt(int max)
     {
         Random random = MatsimRandom.getLocalInstance();
-        random.setSeed(System.currentTimeMillis());
+        //random.setSeed(System.currentTimeMillis());
         return random.nextInt(max);
     }
 
