@@ -213,7 +213,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     {
 
         // range anxiety
-        double delta_score = params.utilityOfEmptyBattery * Math.exp(logn_residual_utility_rangeAnxiety*(soc/params.optimalSOC));
+        double delta_score = params.marginalUtilityOfRangeAnxiety_soc * Math.exp(logn_residual_utility_rangeAnxiety*(soc/params.optimalSOC));
         collectScores(personId, time, ScoreComponents.RANGE_ANXIETY, delta_score);
         
         if(soc<=params.criticalSOCThreshold)
