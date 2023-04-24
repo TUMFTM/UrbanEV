@@ -53,6 +53,7 @@ import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
 import org.matsim.contrib.util.PartialSort;
@@ -66,6 +67,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class VehicleChargingHandler
 		implements ActivityStartEventHandler, ActivityEndEventHandler,
@@ -207,10 +209,13 @@ public class VehicleChargingHandler
 		if(vehiclesAtChargers.containsKey(evId))
 		{
 			Person person = population.getPersons().get(personId);
+			Plan plan = person.getSelectedPlan();
+			List<Activity> allActivities = PlanUtils.getActivities(plan);
 
 			Id<Charger> chargerId = vehiclesAtChargers.get(evId);
 			Charger charger = chargingInfrastructure.getChargers().get(chargerId);
-			Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
+
+			Activity activity = PlanUtils.getActivity(plan, event.getTime());
 			Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
 			ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
@@ -222,7 +227,53 @@ public class VehicleChargingHandler
 			double pluggedDuration = event.getTime()-plugInTS;
 			
 			// Determine whether hogging is an issue
+			// First check whether this charging activity qualifies as hogging
 			boolean hogging = isHogging(plugInTS, event.getTime(), hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes);
+			
+			// If this charging activity does not lead to hogging, check whether hogging might still be an issue, because of hogging before the theoretical simulation start
+			// If the respective charging process started at simulation start...
+			if(plugInTS<=1 && activity!=null && !hogging)
+			{
+			
+				// Extract all other activities at the same location and sort them by their end times
+				List<Activity> activitiesAtSameCoord = PlanUtils.getActivitiesAtCoord(allActivities, activityCoord);
+				activitiesAtSameCoord = activitiesAtSameCoord.stream().filter(a -> a.getEndTime().isDefined() && a.getEndTime().seconds()>activity.getEndTime().seconds()).collect(Collectors.toList());
+				activitiesAtSameCoord = PlanUtils.sortByEndTime(activitiesAtSameCoord);
+
+				// If there are other activities at the same location...
+				if(!activitiesAtSameCoord.isEmpty())
+				{
+					// Sort all such activities by their end times
+					allActivities = PlanUtils.sortByEndTime(allActivities.stream().filter(a -> a.getEndTime().isDefined()).collect(Collectors.toList()));
+					
+					// Check whether actitivies at the same location normally lead to hogging or not (majority vote)					
+					int hoggingCount = 0;
+
+					for(Activity act: activitiesAtSameCoord)
+					{
+						// Extract theoretical plug-in and plug-out timestamps
+						int lastActInd = allActivities.indexOf(act)-1;
+						double virtualPlugIn = allActivities.get(lastActInd).getEndTime().seconds();
+						double virtualPlugOut = act.getEndTime().seconds();
+						
+
+						// Check if they would lead to hogging in the majority of cases
+						if(isHogging(virtualPlugIn, virtualPlugOut, hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes))
+						{
+							hoggingCount++;
+						}
+						else
+						{
+							hoggingCount--;
+						}
+
+					}
+
+					// Determine hogging state of the first activity by comparison with the usual case
+					hogging = hoggingCount>0;
+
+				}
+			}
 
 			// Issue a charging behaviour scoring event
 			// Needed to score the charging process itself 
