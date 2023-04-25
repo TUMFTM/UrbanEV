@@ -8,6 +8,7 @@ public class PersonUtils {
     public static final String NON_CRITICAL_SOC_IDENTIFIER = "nonCriticalSOC";
     public static final String HOME_CHARGER_POWER_ATTR = "homeChargerPower";
     public static final String WORK_CHARGER_POWER_ATTR = "workChargerPower";
+    public static final String OPPORTUNITY_CHARGING_ATTR = "opportunityCharging";
     public static final String SUBPOPULATION_ATTR = "subpopulation";
 
     public static boolean hasAttr(Person person, String attr)
@@ -18,6 +19,11 @@ public class PersonUtils {
     public static Object getAttr(Person person, String attr)
     {
         return person.getAttributes().getAttribute(attr);
+    }
+
+    public static boolean getBooleanAttr(Person person, String attr)
+    {
+        return hasAttr(person, attr) ? ((Boolean) getAttr(person, attr)).booleanValue() : false; 
     }
 
     public static void setAttr(Person person, String attr, Object value)
@@ -65,6 +71,11 @@ public class PersonUtils {
     public static boolean hasPrivateCharger(Person person)
     {
         return hasHomeCharger(person)||hasWorkCharger(person);
+    }
+
+    public static boolean isOpportunityCharging(Person person)
+    {
+        return getBooleanAttr(person, OPPORTUNITY_CHARGING_ATTR);
     }
 
 }

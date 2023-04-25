@@ -11,6 +11,10 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 
 public class PlanUtils {
+
+	public static final String ACTTYPE_INI = "";
+	public static final String ACTTYPE_CHARGING = " charging";
+	public static final String ACTTYPE_END = " end";
     
     public static List<Activity> getActivities(Plan plan){
 
@@ -97,6 +101,56 @@ public class PlanUtils {
 		.filter(a -> a.getEndTime().isDefined() && a.getEndTime().seconds()>=time)
 		.findFirst()
 		.orElse(all_acts.get(all_acts.size()-1));
+	}
+
+	public static boolean isCharging(String actType)
+	{
+		return actType.contains(ACTTYPE_CHARGING);
+	}
+
+	public static boolean isCharging(Activity activity)
+	{
+		return isCharging(activity.getType());
+	}
+
+	public static boolean isIniAct(String actType)
+	{
+		return actType.equals(ACTTYPE_INI);
+	}
+
+	public static boolean isIniAct(Activity activity)
+	{
+		return isIniAct(activity.getType());
+	}
+
+	public static boolean isEndAct(String actType)
+	{
+		return actType.contains(ACTTYPE_END);
+	}
+
+	public static boolean isEndAct(Activity activity)
+	{
+		return isEndAct(activity.getType());
+	}
+
+	public static boolean isHome(String actType)
+	{
+		return actType.contains("home");
+	}
+
+	public static boolean isHome(Activity activity)
+	{
+		return isHome(activity.getType());
+	}
+
+	public static boolean isWork(String actType)
+	{
+		return actType.contains("work") && !actType.contains("_related");
+	}
+
+	public static boolean isWork(Activity activity)
+	{
+		return isWork(activity);
 	}
 
 }
