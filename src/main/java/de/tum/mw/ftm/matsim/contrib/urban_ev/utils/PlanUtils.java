@@ -8,13 +8,13 @@ import java.util.stream.Collectors;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.PlanElement;
 
 public class PlanUtils {
 
 	public static final String ACTTYPE_INI = "";
 	public static final String ACTTYPE_CHARGING = " charging";
 	public static final String ACTTYPE_END = " end";
+	public static final String ACTTYPE_FAILED = " failed";
     
     public static List<Activity> getActivities(Plan plan){
 
@@ -80,11 +80,11 @@ public class PlanUtils {
 	}
 
     public static List<Activity> getChargingActivities(List<Activity> activities){
-        return getActivityTypeContains(activities, "charging");
+        return getActivityTypeContains(activities, ACTTYPE_CHARGING);
     }
 
 	public static List<Activity> getNonChargingActivities(List<Activity> activities){
-        return getActivityTypeNotContains(activities, "charging");
+        return getActivityTypeNotContains(activities, ACTTYPE_CHARGING);
     }
 
     /**
@@ -111,6 +111,16 @@ public class PlanUtils {
 	public static boolean isCharging(Activity activity)
 	{
 		return isCharging(activity.getType());
+	}
+
+	public static void setCharging(Activity activity)
+	{
+		activity.setType(activity.getType() + ACTTYPE_CHARGING);
+	}
+
+	public static void unsetCharging(Activity activity)
+	{
+		activity.setType(activity.getType().replace(ACTTYPE_CHARGING, ""));
 	}
 
 	public static boolean isIniAct(String actType)
@@ -150,7 +160,30 @@ public class PlanUtils {
 
 	public static boolean isWork(Activity activity)
 	{
-		return isWork(activity);
+		return isWork(activity.getType());
+	}
+
+	public static boolean isFailed(String actType)
+	{
+		return actType.contains(ACTTYPE_FAILED);
+	}
+
+	public static boolean isFailed(Activity activity)
+	{
+		return isFailed(activity.getType());
+	}
+
+	public static void setFailed(Activity activity)
+	{
+		if(!isFailed(activity))
+		{
+			activity.setType(activity.getType() + ACTTYPE_FAILED);
+		}
+	}
+
+	public static void unsetFailed(Activity activity)
+	{
+		activity.setType(activity.getType().replace(ACTTYPE_FAILED, ""));
 	}
 
 }

@@ -1,13 +1,13 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.planning;
 
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PersonUtils;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
 import org.matsim.core.replanning.ReplanningContext;
-import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.core.gbl.MatsimRandom;
 
 import java.util.ArrayList;
@@ -16,10 +16,6 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class ChangeChargingBehaviourModule implements PlanStrategyModule {
-
-    private static final String CHARGING_IDENTIFIER = " charging";
-    private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
-    private static final String NON_CRITICAL_SOC_IDENTIFIER = "nonCriticalSOC";
 
     private UrbanEVConfigGroup evCfg;
 
@@ -51,22 +47,16 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         
         // retrieve relevant person characteristics
         Person person = plan.getPerson();
-        Attributes personAttributes = person.getAttributes();
-
-        double homeChargerPower = personAttributes.getAttribute("homeChargerPower") != null ? ((Double) personAttributes.getAttribute("homeChargerPower")).doubleValue() : 0.0;
-		double workChargerPower = personAttributes.getAttribute("workChargerPower") != null ? ((Double) personAttributes.getAttribute("workChargerPower")).doubleValue() : 0.0;
-        String subpopulation = personAttributes.getAttribute("subpopulation").toString();
 
         // derived person characteristics
-        boolean personHasHomeCharger = homeChargerPower>0.0 ? true : false;
-        boolean personHasWorkCharger = workChargerPower>0.0 ? true : false;
-        boolean personHasPrivateCharger = personHasHomeCharger || personHasWorkCharger;
-        boolean personCriticalSOC = subpopulation.equals(CRITICAL_SOC_IDENTIFIER);      
+        boolean personHasHomeCharger = PersonUtils.hasHomeCharger(person);
+        boolean personHasWorkCharger = PersonUtils.hasWorkCharger(person);
+        boolean personHasPrivateCharger = PersonUtils.hasPrivateCharger(person);
+        boolean personCriticalSOC = PersonUtils.isCritical(person);      
 
         // person plan analysis
         List<Activity> activities = PlanUtils.getActivities(plan);
         List<Activity> nonStartOrEndActs = PlanUtils.getActivityTypeNotEquals(PlanUtils.getActivityTypeNotContains(activities, "end"), "");
-
 
         List<Activity> homeActs = PlanUtils.getActivityTypeContains(nonStartOrEndActs, "home");
         List<Activity> workActs = PlanUtils.getActivityTypeNotContains(PlanUtils.getActivityTypeContains(nonStartOrEndActs, "work"), "work_related");
@@ -90,7 +80,7 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         List<Activity> otherActsWithoutCharging = PlanUtils.getNonChargingActivities(otherActs);
 
         // Remove failed charging activities
-        failedChargingActs.forEach((act) -> {act.setType(act.getType().replace(" failed", ""));});
+        failedChargingActs.forEach((act) -> {PlanUtils.unsetFailed(act);});
 
         if(personCriticalSOC){
 
@@ -252,33 +242,23 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         }
 
         // Assume that the person belongs to the non-critical group after replanning
-        setNonCriticalSubpopulation(person);
+        PersonUtils.setNonCritical(person);
 
         person.setSelectedPlan(plan);
 
     }
 
-    private void addChargingActivity(Activity activity)
-    {
-        activity.setType(activity.getType() + CHARGING_IDENTIFIER);
-    }
-
-    private void removeChargingActivity(Activity activity)
-    {
-        activity.setType(activity.getType().replace(CHARGING_IDENTIFIER, ""));
-    }
-
     private void addRandomChargingActivity(List<Activity> potential_add_acts) {
         // select random activity without charging and change to activity with charging
         if (!potential_add_acts.isEmpty()) {
-            addChargingActivity(getRandomActivity(potential_add_acts));
+            PlanUtils.setCharging(getRandomActivity(potential_add_acts));
         }
     }
 
     private void removeRandomChargingActivity(List<Activity> potential_remove_acts) {
         // select random activity with charging and change to activity without charging
         if (!potential_remove_acts.isEmpty()) {
-            removeChargingActivity(getRandomActivity(potential_remove_acts));
+            PlanUtils.unsetCharging((getRandomActivity(potential_remove_acts)));
         }
     }
 
@@ -290,11 +270,6 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
             removeRandomChargingActivity(chargingActs);
             addRandomChargingActivity(noChargingActs);
         }
-    }
-
-    @Override
-    public void prepareReplanning(ReplanningContext replanningContext) {
-
     }
 
     private int getRandomInt(int max)
@@ -310,8 +285,9 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         return activities.get(getRandomInt(activities.size()));
     }
 
-    private void setNonCriticalSubpopulation(Person person){
-        person.getAttributes().putAttribute("subpopulation", NON_CRITICAL_SOC_IDENTIFIER);
+    @Override
+    public void prepareReplanning(ReplanningContext replanningContext) {
+
     }
 
 }

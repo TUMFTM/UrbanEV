@@ -11,7 +11,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.scoring.SumScoringFunction;
 
 public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEventScoring {
@@ -69,19 +68,24 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
             double time = chargingBehaviourScoringEvent.getTime();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
-            boolean isCharging = PlanUtils.isCharging(activityType);
-            boolean isIniAct = PlanUtils.isIniAct(activityType);
-            boolean isEndAct = PlanUtils.isEndAct(activityType);
-
+            
             // make sure this is not called on unspecified/ini activities
-            if(!isIniAct)
+            if(!PlanUtils.isIniAct(activityType))
             {
-                ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger();
+                ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger(); 
+
                 double soc = chargingBehaviourScoringEvent.getSoc();
+
+                boolean isEndAct = PlanUtils.isEndAct(activityType);
                 boolean isActStart = scoreTrigger==ScoreTrigger.ACTIVITYSTART;
                 boolean isActEnd = scoreTrigger==ScoreTrigger.ACTIVITYEND;
+                boolean isCharging = PlanUtils.isCharging(activityType);
+
                 boolean isHome = PlanUtils.isHome(activityType);
                 boolean isWork = PlanUtils.isWork(activityType);
+                
+                boolean isPrivateCharging = isCharging&&((isHome&&hasChargerAtHome)||(isWork&&hasChargerAtWork)); 
+                boolean isPublicCharging = !isPrivateCharging;
 
                 // punish empty battery at any chance
                 if(soc==0 && (isActStart || isActEnd))
@@ -125,7 +129,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                     // Scoring of charging hogging                    
                     if(
                         chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
-                        !((isHome && hasChargerAtHome) || (isWork && hasChargerAtWork)) // and charging was performed publicly
+                        isPublicCharging // and charging was performed publicly
                         ) 
                     {
                         score += scoreStationHogging(time);
@@ -221,7 +225,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         if(soc<=params.criticalSOCThreshold)
         {
             // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-            person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+            PersonUtils.setCritical(person);
         }
         
         return delta_score; 
@@ -234,7 +238,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         collectScores(personId, time, ScoreComponents.EMPTY_BATTERY, delta_score);
             
         // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-        person.getAttributes().putAttribute("subpopulation", CRITICAL_SOC_IDENTIFIER);
+        PersonUtils.setCritical(person);
 
         return delta_score;
     }
@@ -259,31 +263,22 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         
         boolean planContainsSuccessfulOpportunityCharging = false;
 
-        for(PlanElement pe:person.getSelectedPlan().getPlanElements()){
+        for(Activity act:PlanUtils.getActivities(person.getSelectedPlan())){
 
-            if (pe instanceof Activity) {
+            if(PlanUtils.isCharging(act) && !PlanUtils.isFailed(act))
+            {
+                boolean isPrivateHomeCharging = PlanUtils.isHome(act) && hasChargerAtHome;
+                boolean isPrivateWorkCharging = PlanUtils.isWork(act) && hasChargerAtWork;
 
-                Activity act = (Activity) pe;
-                String actType = act.getType();
-                
-                boolean isSuccessfulCharging = PlanUtils.isCharging(actType) && !actType.contains("failed");
-
-                if(isSuccessfulCharging)
+                if(!isPrivateHomeCharging && !isPrivateWorkCharging)
                 {
-                    boolean isPrivateHomeCharging = actType.contains("home") && hasChargerAtHome;
-                    boolean isWorkCharging = actType.contains("work") && !actType.contains("work_related");
-                    boolean isPrivateWorkCharging = isWorkCharging && hasChargerAtWork;
-
-                    if(!isPrivateHomeCharging && !isPrivateWorkCharging)
-                    {
-                        // plan contains a successful opportunity charging activity in case there is a charging activity that
-                        // is non-home, non-work, did not fail and is not the last activity
-                        planContainsSuccessfulOpportunityCharging = true;
-                        break;
-                    }
+                    // plan contains a successful opportunity charging activity in case there is a charging activity that
+                    // is non-home, non-work, did not fail and is not the last activity
+                    planContainsSuccessfulOpportunityCharging = true;
+                    break;
                 }
-                
             }
+            
 
         }
 

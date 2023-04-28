@@ -75,7 +75,6 @@ public class VehicleChargingHandler
 
 	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
 
-	public static final String CHARGING_IDENTIFIER = " charging";
 	public static final Integer SECONDS_PER_MINUTE = 60;
 	public static final Integer SECONDS_PER_HOUR = 60*SECONDS_PER_MINUTE;
 	public static final Integer SECONDS_PER_DAY = 24*SECONDS_PER_HOUR;
@@ -119,7 +118,6 @@ public class VehicleChargingHandler
 	@Override
 	public void handleEvent(ActivityStartEvent event) {
 
-		String actType = event.getActType();
 		Id<Person> personId = event.getPersonId();
 
 		if (personId != null) {
@@ -128,13 +126,15 @@ public class VehicleChargingHandler
 
 			if (electricFleet.getElectricVehicles().containsKey(evId)) {
 				
+				String actType = event.getActType();
 				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
 				Person person = population.getPersons().get(personId);
 				double walkingDistance = 0.0;
+				double time = event.getTime();
 
-				if (event.getActType().endsWith(CHARGING_IDENTIFIER)) {
+				if (PlanUtils.isCharging(actType)) {
 					
-					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), event.getTime());
+					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), time);
 					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
 					// Location choice
@@ -159,15 +159,14 @@ public class VehicleChargingHandler
 					
 					// Start charging if possible
 					if (selectedCharger != null) { // if charger was found, start charging
-						selectedCharger.getLogic().addVehicle(ev, event.getTime());
+						selectedCharger.getLogic().addVehicle(ev, time);
 						vehiclesAtChargers.put(evId, selectedCharger.getId());
 						walkingDistance = DistanceUtils.calculateDistance(
 								activityCoord, selectedCharger.getCoord());
 					} else {
 						// if no charger was found, mark as failed attempt in plan if not already marked
-						if (activity != null && !activity.getType().contains("failed")) {
-							actType = activity.getType() + " failed";
-							activity.setType(actType);
+						if (activity != null) {
+							PlanUtils.setFailed(activity);
 						}
 					}
 				}
