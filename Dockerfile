@@ -1,5 +1,5 @@
 ARG APP_DIR=/opt/matsim
-FROM maven:3.6.0-jdk-11-slim AS build
+FROM maven:3.8.6-openjdk-11-slim AS build
 ARG APP_DIR
 WORKDIR ${APP_DIR}
 COPY . ./
