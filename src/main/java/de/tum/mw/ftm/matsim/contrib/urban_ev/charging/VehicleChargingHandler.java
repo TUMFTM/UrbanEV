@@ -171,7 +171,6 @@ public class VehicleChargingHandler
 					}
 				}
 
-				double time = event.getTime();
 				double socUponArrival = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
 
