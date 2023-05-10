@@ -7,31 +7,16 @@ import java.util.Objects;
 public class ElectricVehicleTypeImpl implements ElectricVehicleType {
     private final Id<ElectricVehicleType> id;
     private final String name;
+    private final double batteryCapacity;
     private final double consumption;
     private final double maxChargingRate;
-    private final double mass;
-    private final double width;
-    private final double height;
-    private final double length;
-    private final double aerodynamicDragCoefficient;
-    private final double rollingDragCoefficient;
-    private final double inertiaResistanceCoefficient;
-    private final double driveTrainEfficiency;
-
 
     private ElectricVehicleTypeImpl(ElectricVehicleTypeImpl.Builder builder) {
         id = Objects.requireNonNull(builder.id);
         name = Objects.requireNonNull(builder.name);
+        batteryCapacity = Objects.requireNonNull(builder.batteryCapacity);
         consumption = Objects.requireNonNull(builder.consumption);
         maxChargingRate = Objects.requireNonNull(builder.maxChargingRate);
-        mass = Objects.requireNonNull(builder.mass);
-        width = Objects.requireNonNull(builder.width);
-        height = Objects.requireNonNull(builder.height);
-        length = Objects.requireNonNull(builder.length);
-        aerodynamicDragCoefficient = Objects.requireNonNull(builder.aerodynamicDragCoefficient);
-        rollingDragCoefficient = Objects.requireNonNull(builder.rollingDragCoefficient);
-        inertiaResistanceCoefficient = Objects.requireNonNull(builder.inertiaResistanceCoefficient);
-        driveTrainEfficiency = Objects.requireNonNull(builder.driveTrainEfficiency);
     }
 
     public static ElectricVehicleTypeImpl.Builder newBuilder() {
@@ -42,16 +27,9 @@ public class ElectricVehicleTypeImpl implements ElectricVehicleType {
         ElectricVehicleTypeImpl.Builder builder = new ElectricVehicleTypeImpl.Builder();
         builder.id = copy.getId();
         builder.name = copy.getName();
+        builder.batteryCapacity = copy.getBatteryCapacity();
         builder.consumption = copy.getConsumption();
         builder.maxChargingRate = copy.getMaxChargingRate();
-        builder.mass = copy.getMass();
-        builder.width = copy.getWidth();
-        builder.height = copy.getHeight();
-        builder.length = copy.getLength();
-        builder.aerodynamicDragCoefficient = copy.getAerodynamicDragCoefficient();
-        builder.rollingDragCoefficient = copy.getRollingDragCoefficient();
-        builder.inertiaResistanceCoefficient = copy.getInertiaResistanceCoefficient();
-        builder.driveTrainEfficiency = copy.getDriveTrainEfficiency();
         return builder;
     }
 
@@ -76,58 +54,16 @@ public class ElectricVehicleTypeImpl implements ElectricVehicleType {
     }
 
     @Override
-    public double getMass() {
-        return mass;
-    }
-
-    @Override
-    public double getWidth() {
-        return width;
-    }
-
-    @Override
-    public double getHeight() {
-        return height;
-    }
-
-    @Override
-    public double getLength() {
-        return length;
-    }
-
-    @Override
-    public double getAerodynamicDragCoefficient() {
-        return aerodynamicDragCoefficient;
-    }
-
-    @Override
-    public double getRollingDragCoefficient() {
-        return rollingDragCoefficient;
-    }
-
-    @Override
-    public double getInertiaResistanceCoefficient() {
-        return inertiaResistanceCoefficient;
-    }
-
-    @Override
-    public double getDriveTrainEfficiency() {
-        return driveTrainEfficiency;
+    public double getBatteryCapacity(){
+        return batteryCapacity;
     }
 
     public static final class Builder {
         private Id<ElectricVehicleType> id;
         private String name;
+        private Double batteryCapacity;
         private Double consumption;
         private Double maxChargingRate;
-        private Double mass;
-        private Double width;
-        private Double height;
-        private Double length;
-        private Double aerodynamicDragCoefficient;
-        private Double rollingDragCoefficient;
-        private Double inertiaResistanceCoefficient;
-        private Double driveTrainEfficiency;
 
         private Builder() {
         }
@@ -152,43 +88,8 @@ public class ElectricVehicleTypeImpl implements ElectricVehicleType {
             return this;
         }
 
-        public ElectricVehicleTypeImpl.Builder mass(double val) {
-            mass = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder width(double val) {
-            width = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder height(double val) {
-            height = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder length(double val) {
-            length = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder aerodynamicDragCoefficient(double val) {
-            aerodynamicDragCoefficient = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder rollingDragCoefficient(double val) {
-            rollingDragCoefficient = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder inertiaResistanceCoefficient(double val) {
-            inertiaResistanceCoefficient = val;
-            return this;
-        }
-
-        public ElectricVehicleTypeImpl.Builder driveTrainEfficiency(double val) {
-            driveTrainEfficiency = val;
+        public ElectricVehicleTypeImpl.Builder batteryCapacity(double val){
+            batteryCapacity = val;
             return this;
         }
 

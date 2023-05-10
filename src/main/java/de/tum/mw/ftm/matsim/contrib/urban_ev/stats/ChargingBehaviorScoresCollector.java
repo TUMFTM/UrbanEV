@@ -5,8 +5,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 
 /**
  * A class to collect all the data about the scoring of charging activities
@@ -17,64 +15,33 @@ import java.util.HashMap;
 public class ChargingBehaviorScoresCollector {
 
     private static final ChargingBehaviorScoresCollector OBJ = new ChargingBehaviorScoresCollector();
-    private HashMap<ChargingBehaviourScoring.ScoreComponents, ArrayList<Double>> chargingBehaviorScoringComponents = new HashMap<>();
-    private HashMap<ChargingBehaviourScoring.ScoreComponents, ArrayList<Id<Person>>> scoringPersons = new HashMap<>();
+
+    private ArrayList<ChargingScoreLogEntry> scoringHistory = new ArrayList<>();
 
     public static ChargingBehaviorScoresCollector getInstance(){
         return OBJ;
     }
 
     private ChargingBehaviorScoresCollector() {
-        // Initialize charging component storage
-        Arrays.stream(ChargingBehaviourScoring.ScoreComponents.values()).forEach(scoringComponent -> {
-            // Initialize history containers
-            chargingBehaviorScoringComponents.put(scoringComponent, new ArrayList<Double>());
-            scoringPersons.put(scoringComponent, new ArrayList<Id<Person>>());
-        });
     }
 
-    public void addScoringComponentValue(ChargingBehaviourScoring.ScoreComponents component, double value)
+    public void collect(
+        Id<Person> personId,
+        double time,
+        ChargingBehaviourScoring.ScoreComponents scoreComponent,
+        double value
+        )
     {
-        chargingBehaviorScoringComponents.get(component).add(value);
+        scoringHistory.add(new ChargingScoreLogEntry(personId, time, scoreComponent, value));
     }
 
-    public void addScoringPerson(ChargingBehaviourScoring.ScoreComponents component, Id<Person> personId){
-
-        if(!scoringPersons.get(component).contains(personId))
-        {
-            scoringPersons.get(component).add(personId);
-        }
-    }
-
-    public HashMap<ChargingBehaviourScoring.ScoreComponents, ArrayList<Double>> getChargingBehaviorScoringComponents()
+    public ArrayList<ChargingScoreLogEntry> getScoringHistory()
     {
-        return chargingBehaviorScoringComponents;
-    }
-
-    public HashMap<ChargingBehaviourScoring.ScoreComponents, ArrayList<Id<Person>>> getScoringPersons() {
-        return scoringPersons;
-    }
-
-    public double getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents scoreComponent){
-        return scoringPersons.get(scoreComponent).size();
-    }
-
-    public double getComponentSum(ChargingBehaviourScoring.ScoreComponents scoreComponent){
-        return chargingBehaviorScoringComponents.get(scoreComponent).stream().mapToDouble(a -> a).sum();
-    }
-
-    public double getComponentMean(ChargingBehaviourScoring.ScoreComponents scoreComponent){
-        return chargingBehaviorScoringComponents.get(scoreComponent).stream().mapToDouble(a -> a).sum()/getNumberOfScoringPersonsForComponent(scoreComponent);
+        return scoringHistory;
     }
 
     public void reset(){
-        chargingBehaviorScoringComponents.keySet().forEach(scoringComponent -> {
-            chargingBehaviorScoringComponents.get(scoringComponent).clear();
-        });
-
-        scoringPersons.keySet().forEach(scoringComponent -> {
-            scoringPersons.get(scoringComponent).clear();
-        });
+        scoringHistory.clear();
     }
 
 }

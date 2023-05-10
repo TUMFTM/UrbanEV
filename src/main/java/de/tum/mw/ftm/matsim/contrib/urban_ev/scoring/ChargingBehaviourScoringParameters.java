@@ -11,18 +11,39 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
     public final double marginalUtilityOfWalking_m;
     public final double utilityOfHomeCharging;
     public final double marginalUtilityOfSocDifference;
+    public final double failedOpportunityChargingUtility;
+    public final double marginalUtilityOfStationHogging;
+    public final double optimalSOC;
+    public final double criticalSOCThreshold;
+    public final double batteryHealthStressUtility;
+    public final double parkingSearchRadius;
+    public final double referenceParkingDistance;
 
     private ChargingBehaviourScoringParameters(
             final double marginalUtilityOfRangeAnxiety_soc,
             final double utilityOfEmptyBattery,
             final double marginalUtilityOfWalking_m,
             final double utilityOfHomeCharging,
-            final double marginalUtilityOfSocDifference) {
+            final double marginalUtilityOfSocDifference,
+            final double failedOpportunityChargingUtility,
+            final double marginalUtilityOfStationHogging,
+            final double optimalSOC,
+            final double criticalSOCThreshold,
+            final double batteryHealthStressUtility,
+            final double parkingSearchRadius,
+            final double referenceParkingDistance) {
         this.marginalUtilityOfRangeAnxiety_soc = marginalUtilityOfRangeAnxiety_soc;
         this.utilityOfEmptyBattery = utilityOfEmptyBattery;
         this.marginalUtilityOfWalking_m = marginalUtilityOfWalking_m;
         this.utilityOfHomeCharging = utilityOfHomeCharging;
         this.marginalUtilityOfSocDifference = marginalUtilityOfSocDifference;
+        this.failedOpportunityChargingUtility = failedOpportunityChargingUtility;
+        this.marginalUtilityOfStationHogging = marginalUtilityOfStationHogging;
+        this.batteryHealthStressUtility = batteryHealthStressUtility;
+        this.optimalSOC = optimalSOC;
+        this.criticalSOCThreshold = criticalSOCThreshold;
+        this.parkingSearchRadius = parkingSearchRadius;
+        this.referenceParkingDistance = referenceParkingDistance;
     }
 
     public static final class Builder {
@@ -31,6 +52,13 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         private double marginalUtilityOfWalking_m;
         private double utilityOfHomeCharging;
         private double marginalUtilityOfSocDifference;
+        private double failedOpportunityChargingUtility;
+        private double marginalUtilityOfStationHogging;
+        private double optimalSOC;
+        private double criticalSOCThreshold;
+        private double batteryHealthStressUtility;
+        private double parkingSearchRadius;
+        private double referenceParkingDistance;
 
         public Builder(final Scenario scenario) {
             this((UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev"));
@@ -42,6 +70,13 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             marginalUtilityOfWalking_m = configGroup.getWalkingUtility();
             utilityOfHomeCharging = configGroup.getHomeChargingUtility();
             marginalUtilityOfSocDifference = configGroup.getSocDifferenceUtility();
+            failedOpportunityChargingUtility = configGroup.getFailedOpportunityChargingUtility();
+            marginalUtilityOfStationHogging = configGroup.getStationHoggingUtility();
+            optimalSOC = configGroup.getOptimalSOC();
+            criticalSOCThreshold = configGroup.getCriticalSOCThreshold();
+            batteryHealthStressUtility = configGroup.getBatteryHealthStressUtility();
+            parkingSearchRadius = configGroup.getParkingSearchRadius();
+            referenceParkingDistance = configGroup.getReferenceParkingDistance();
         }
 
         public ChargingBehaviourScoringParameters build() {
@@ -50,7 +85,14 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
                     utilityOfEmptyBattery,
                     marginalUtilityOfWalking_m,
                     utilityOfHomeCharging,
-                    marginalUtilityOfSocDifference
+                    marginalUtilityOfSocDifference,
+                    failedOpportunityChargingUtility,
+                    marginalUtilityOfStationHogging,
+                    optimalSOC,
+                    criticalSOCThreshold,
+                    batteryHealthStressUtility,
+                    parkingSearchRadius,
+                    referenceParkingDistance
             );
         }
     }

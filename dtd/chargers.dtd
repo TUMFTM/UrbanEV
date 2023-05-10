@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+        <!ELEMENT chargers (charger)*>
+
+        <!ELEMENT charger EMPTY>
+
+        <!-- x - x coordinate of the charger -->
+        <!-- y - y coordinate of the charger -->
+        <!-- plug_power - in kWh -->
+        <!-- plug_count - number of plugs; 1 if not provided -->
+        <!-- allowed_vehicles - ids of allowed vehicles (e.g. "1,2,4"); "all" if not provided -->
+        <!ATTLIST charger
+                id CDATA #REQUIRED
+                x CDATA #REQUIRED
+                y CDATA #REQUIRED
+                plug_power CDATA #REQUIRED
+                plug_count CDATA #IMPLIED
+                type CDATA #IMPLIED
+                allowed_vehicles CDATA #IMPLIED >

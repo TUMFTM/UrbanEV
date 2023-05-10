@@ -44,14 +44,7 @@ public class ElectricVehicleTypesReader extends MatsimXmlParser {
 					.name(atts.getValue("name"))
 					.consumption(Double.parseDouble(atts.getValue("consumption")))
 					.maxChargingRate(Double.parseDouble(atts.getValue("max_charging_rate")))
-					.mass(Double.parseDouble(atts.getValue("mass")))
-					.width(Double.parseDouble(atts.getValue("width")))
-					.height(Double.parseDouble(atts.getValue("height")))
-					.length(Double.parseDouble(atts.getValue("length")))
-					.aerodynamicDragCoefficient(Double.parseDouble(atts.getValue("cw")))
-					.rollingDragCoefficient(Double.parseDouble(atts.getValue("ft")))
-					.inertiaResistanceCoefficient(Double.parseDouble(atts.getValue("cb")))
-					.driveTrainEfficiency(Double.parseDouble(atts.getValue("spr")))
+					.batteryCapacity(Double.parseDouble(atts.getValue("battery_capacity")))
 					.build();
 			types.put(type.getId(), type);
 		}

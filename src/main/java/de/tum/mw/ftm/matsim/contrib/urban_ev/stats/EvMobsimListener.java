@@ -33,6 +33,8 @@ package de.tum.mw.ftm.matsim.contrib.urban_ev.stats;/*
  */
 
 import com.google.inject.Inject;
+
+import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.discharging.DriveDischargingHandler;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
 import org.apache.commons.csv.CSVFormat;
@@ -40,6 +42,11 @@ import org.apache.commons.csv.CSVPrinter;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.ev.EvUnits;
 import org.matsim.core.controler.IterationCounter;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -47,11 +54,13 @@ import org.matsim.core.mobsim.framework.events.MobsimBeforeCleanupEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener;
 import org.matsim.core.utils.misc.Time;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.Objects;
 
 public class EvMobsimListener implements MobsimBeforeCleanupListener {
 
@@ -69,6 +78,10 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 	IterationCounter iterationCounter;
 	@Inject
 	Network network;
+	@Inject
+	UrbanEVConfigGroup urbanEVConfigGroup;
+	@Inject
+	Population population;
 
 	@Override
 	public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent event) {
@@ -80,10 +93,70 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 		writeChargingBehaviourScoringStats(chargingBehaviorScoresCollector);
 		writeChargingStats();
 		writeChargerOccupancyStats();
-		writeLinkEnergyStats();
+		writeChargingPlans();
+		//writeLinkEnergyStats();
 
 		// Reset ChargingBehaviorScoresCollector for next iteration
 		chargingBehaviorScoresCollector.reset();
+
+		if(urbanEVConfigGroup.isDeleteIterationsOnTheFly()){
+			
+			// Clean up iteration files
+			cleanUpIterations(iterationCounter, urbanEVConfigGroup.isForceKeepNthIteration(), urbanEVConfigGroup.getKeepIterationsModulo());
+		}
+			
+	}
+
+	private void writeChargingPlans() {
+
+		try
+		{
+			CSVPrinter csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getIterationFilename(iterationCounter.getIterationNumber(), "chargingPlans.csv"))), CSVFormat.DEFAULT.withDelimiter(';').
+						withHeader(
+								"personId",
+								"activity",
+								"x",
+								"y",
+								"end_time",
+								"status"
+						));
+
+			for(Map.Entry<Id<Person>, ? extends Person> entry : population.getPersons().entrySet())
+			{
+				Person person = entry.getValue();
+				Plan selectedPlan = person.getSelectedPlan();
+			
+				for(PlanElement pe : selectedPlan.getPlanElements()){
+					if(pe instanceof Activity)
+					{
+						Activity act = (Activity) pe;
+						if(act.getType().contains("charging"))
+						{
+							String status = act.getType().contains("failed") ? "failed" : "success";
+							csvPrinter.printRecord(
+								person.getId().toString(),
+								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
+								Double.toString(act.getCoord().getX()),
+								Double.toString(act.getCoord().getY()),
+								Double.toString(act.getEndTime().seconds()),
+								status
+							);
+						}
+					}
+				}
+	
+			}	
+
+			csvPrinter.close();
+
+		}
+		catch (RuntimeException e){
+			e.printStackTrace();
+		}
+		catch (IOException io){
+			io.printStackTrace();
+		}
+
 	}
 
 	private void writeChargingStats(){
@@ -193,47 +266,30 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 			if(curIteration==0) {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.CREATE), CSVFormat.DEFAULT.withDelimiter(';').withHeader(
 						"iterationNumber",
-						"sumRangeAnxiety",
-						"rangeAnxietyScoringPersons",
-						"meanRangeAnxiety",
-						"sumEmptyBattery",
-						"emptyBatteryScoringPersons",
-						"meanEmptyBattery",
-						"sumWalkingDistance",
-						"walkingDistanceScoringPersons",
-						"meanWalkingDistance",
-						"sumHomeCharging",
-						"homeChargingScoringPersons",
-						"meanHomeCharging",
-						"sumEnergyBalance",
-						"energyBalanceScoringPersons",
-						"meanEnergyBalance"
+						"personId",
+						"time",
+						"scoreComponent",
+						"value"
 				));
 			} else {
 				csvPrinter = new CSVPrinter(Files.newBufferedWriter(Paths.get(controlerIO.getOutputPath(), "scoringComponents.csv"), StandardOpenOption.APPEND), CSVFormat.DEFAULT.withDelimiter(';'));
 			}
 
+			for(ChargingScoreLogEntry logEntry : chargingBehaviorScoresCollector.getScoringHistory())
+			{
+				csvPrinter.printRecord(
+				Integer.toString(curIteration),
+				logEntry.getPersonId().toString(),
+				Double.toString(logEntry.getTime()),
+				logEntry.getScoreComponent().toString(),
+				Double.toString(logEntry.getValue())
+				);
+			}
 
-			csvPrinter.printRecord(
-					Integer.toString(curIteration),
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 							// sum RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 	// number of persons scoring RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.RANGE_ANXIETY)), 							// mean RANGE_ANXIETY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 							// sum EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 	// number of persons scoring EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.EMPTY_BATTERY)), 							// mean EMPTY_BATTERY
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 						// sum WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 	// number of persons scoring WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.WALKING_DISTANCE)), 						// mean WALKING_DISTANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 							// sum HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 	// number of persons scoring HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.HOME_CHARGING)), 							// mean HOME_CHARGING
-					Double.toString(chargingBehaviorScoresCollector.getComponentSum(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 							// sum ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getNumberOfScoringPersonsForComponent(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)), 	// number of persons scoring ENERGY_BALANCE
-					Double.toString(chargingBehaviorScoresCollector.getComponentMean(ChargingBehaviourScoring.ScoreComponents.ENERGY_BALANCE)) 							// mean ENERGY_BALANCE
-			);
+			// Free space for new iteration
+			ChargingBehaviorScoresCollector.getInstance().reset();
 
-
+			// Housekeeping
 			csvPrinter.close();
 		}
 		catch (RuntimeException e){
@@ -243,4 +299,30 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 			io.printStackTrace();
 		}
 	}
+
+	private void deleteDir(File file){
+		File[] contents = file.listFiles();
+		if(!Objects.isNull(contents)){
+			for(File f : contents){
+				deleteDir(f);
+			}
+		}
+		file.delete();
+	}
+
+	private void cleanUpIterations(IterationCounter iterationCounter, boolean forceKeepNthIteration, int moduloKeep) // Todo: Add possibility to preserve predefined iterations
+	{
+		int iteration = iterationCounter.getIterationNumber();
+
+		// delete previous iteration if...
+		if (
+			iteration > 0 && // ... we are at least in it.1  
+				(!forceKeepNthIteration || (forceKeepNthIteration && iteration % moduloKeep != 1)) // ... the previous iteration is not to be kept
+			){
+            File dir_to_delete = new File(controlerIO.getIterationPath(iteration-1)); // Determine previous iteration number
+            deleteDir(dir_to_delete); // Delete last Iteration
+        }
+
+	}
+
 }

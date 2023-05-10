@@ -14,6 +14,8 @@ import org.matsim.contrib.ev.EvConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.PlansConfigGroup;
+import org.matsim.core.config.groups.StrategyConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.mobsim.qsim.AbstractQSimModule;
@@ -37,39 +39,95 @@ public class RunMATSimUrbanEV {
 
 	public static void main(String[] args) throws IOException {
 
+
+		// Read program args
 		String configPath = "";
-		int initIterations = 0;
 
-		if (args != null && args.length == 2) {
-			configPath = args[0];
-			initIterations = Integer.parseInt(args[1]);
-		} else if (args != null && args.length == 1){
-			configPath = args[0];
-			initIterations = 0;
+		// Check, if MATSim runs inside container and determine config file path
+        String inputPath = Environment.getMatsimInputPath();
+        String outputPath = Environment.getMatsimOutputPath();
+        String matsimVersion = Environment.getMatsimVersion();
+		
+		if (inputPath != null) {
+
+			log.info("Starting MATSim in Docker container." + matsimVersion);
+			configPath = String.format("%s/%s", inputPath, "config.xml");
 		}
-		else{
-			System.out.println("Config file missing. Please supply a config file path as a program argument.");
-			throw new IOException("Could not start simulation. Config file missing.");
+        else 
+		{
+			// Not running in a docker container. Retrieve config file from program args
+			if (args != null && args.length == 1){
+				configPath = args[0];
+			}
+			else{
+				System.out.println("Config file missing. Please supply a config file path as a program argument.");
+				throw new IOException("Could not start simulation. Config file missing.");
+			}
+
 		}
 
-		log.info("Config file path: " + configPath);
-		log.info("Number of iterations to initialize SOC distribution: " + initIterations);
-
+		// Prepare configs and output path
 		ConfigGroup[] configGroups = new ConfigGroup[]{new EvConfigGroup(), new UrbanEVConfigGroup()};
 		Config config = ConfigUtils.loadConfig(configPath, configGroups);
+		Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
+		UrbanEVConfigGroup urbanEVConfigGroup = (UrbanEVConfigGroup) config.getModules().get("urban_ev");
 
-		if (initIterations > 0) {
-			Config initConfig = ConfigUtils.loadConfig(configPath, configGroups);
-			initConfig.controler().setLastIteration(initIterations);
-			initConfig.controler().setOutputDirectory(initConfig.controler().getOutputDirectory() + "/init");
-			loadConfigAndRun(initConfig);
-
-			// use new vehicles file for training
-			EvConfigGroup evConfigGroup = (EvConfigGroup) config.getModules().get("ev");
-			evConfigGroup.setVehiclesFile("output/init/output_evehicles.xml");
-			config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "/train");
+		if (outputPath != null){
+			// If this is running within a docker container...
+			// .. correct the output directory accordingly
+			config.controler().setOutputDirectory(outputPath);
+			initConfig.controler().setOutputDirectory(outputPath);
 		}
 
+		// Determine number of initializations
+		int initIterations = urbanEVConfigGroup.getInitializationIterations();
+		int initRepetitions = urbanEVConfigGroup.getInitializationRepetitions();
+
+		// Inform user
+		log.info("Config file path: " + configPath);
+		log.info("Number of iterations to initialize SOC distribution: " + initIterations);
+		log.info("Repetitions of the initialization procedure: " + initRepetitions);
+
+		if (initIterations > 0) {
+			
+			// Configure initialization
+			initConfig.controler().setLastIteration(initIterations);
+			String baseOutputDirectory = initConfig.controler().getOutputDirectory();
+			StrategyConfigGroup strategyConfigGroup = (StrategyConfigGroup) initConfig.getModules().get("strategy");
+			
+			// Make sure that innovation is not disabled during initialization
+			strategyConfigGroup.setFractionOfIterationsToDisableInnovation(1.1);
+			
+			// If initialization iterations are needed
+			for(int repetition = 0; repetition <= initRepetitions; repetition++)
+			{
+				// Construct init specific output dir
+				String outputDirectory = baseOutputDirectory + "/init" + Integer.toString(repetition);
+				initConfig.controler().setOutputDirectory(outputDirectory);
+				
+				// Run simulation
+				loadConfigAndRun(initConfig);
+
+				// use new vehicles file for next initialization
+				EvConfigGroup evConfigGroup = (EvConfigGroup) initConfig.getModules().get("ev");
+				PlansConfigGroup plansConfigGroup = (PlansConfigGroup) initConfig.getModules().get("plans");
+
+				// use new vehicles file and plans for training
+				evConfigGroup.setVehiclesFile("output/init" + Integer.toString(repetition) + "/output_evehicles.xml");
+				plansConfigGroup.setInputFile("output/init" + Integer.toString(repetition) + "/output_plans.xml.gz");
+			}
+
+			// use new vehicles file and plans for training
+			EvConfigGroup evConfigGroup = (EvConfigGroup) config.getModules().get("ev");
+			PlansConfigGroup plansConfigGroup = (PlansConfigGroup) config.getModules().get("plans");
+			evConfigGroup.setVehiclesFile("output/init" + Integer.toString(initRepetitions) + "/output_evehicles.xml");
+			plansConfigGroup.setInputFile("output/init" + Integer.toString(initRepetitions) + "/output_plans.xml.gz");
+
+			// Set output directory
+			config.controler().setOutputDirectory(baseOutputDirectory + "/train");
+		}
+
+		// Start final run
 		loadConfigAndRun(config);
 
 	}
@@ -113,10 +171,14 @@ public class RunMATSimUrbanEV {
 			}
 		});
 
-		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=0 will be added to a special replanning subpopulation that will be replanned in any case
+		// At first, assign every person to a default (nonCriticalSOC) replanning subpopulation. Later on, persons, whose vehicles reach an SOC<=rangeAnxiety will be added to a special replanning subpopulation that will be replanned in any case
 		Population population = controler.getScenario().getPopulation();
 		population.getPersons().entrySet().forEach(entry->{entry.getValue().getAttributes().putAttribute("subpopulation", "nonCriticalSOC");});
+		long start = System.currentTimeMillis();
 
 		controler.run();
+		long finish = System.currentTimeMillis();
+		long timeElapsed = finish - start;
+		System.out.println(timeElapsed);
 	}
 }

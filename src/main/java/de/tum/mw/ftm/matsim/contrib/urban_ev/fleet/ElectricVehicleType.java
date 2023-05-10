@@ -7,13 +7,6 @@ public interface ElectricVehicleType extends Identifiable<ElectricVehicleType> {
     Id<ElectricVehicleType> getId();
     String getName();
     double getConsumption(); // [kWh/100km]
+    double getBatteryCapacity(); // [kWh]
     double getMaxChargingRate(); // max C-Rate for charging [1/h]
-    double getMass(); // m [kg]
-    double getWidth(); // w [m]
-    double getHeight(); // h [m]
-    double getLength(); // l [m]
-    double getAerodynamicDragCoefficient(); // cw [-]
-    double getRollingDragCoefficient(); // ft [-]
-    double getInertiaResistanceCoefficient(); // cb [-]
-    double getDriveTrainEfficiency(); // spr [-]
 }

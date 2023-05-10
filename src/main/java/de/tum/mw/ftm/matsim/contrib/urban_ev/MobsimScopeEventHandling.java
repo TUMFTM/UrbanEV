@@ -29,39 +29,25 @@ email	:	lennart.adenaw@tum.de
 
 package de.tum.mw.ftm.matsim.contrib.urban_ev;
 
-import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.*;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.*;
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.contrib.ev.EvUnits;
 import org.matsim.contrib.ev.MobsimScopeEventHandler;
-import org.matsim.contrib.util.CSVReaders;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.IterationCounter;
-import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.core.controler.listener.StartupListener;
-import org.matsim.core.replanning.StrategyManager;
-import org.matsim.core.utils.misc.Time;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Meant for event handlers that are created anew in each iteration and should operate only until the end of the current
@@ -73,12 +59,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MobsimScopeEventHandling implements StartupListener, AfterMobsimListener {
 	private final Collection<MobsimScopeEventHandler> eventHandlers = new ConcurrentLinkedQueue<>();
 	private final EventsManager eventsManager;
-	private Random random = new Random();
-	private StrategyManager strategyManager;
 
-	private int iterationNumber = 0;
 	private int lastIteration = 0;
-	private double endTime = 0;
 
 	@Inject
 	public MobsimScopeEventHandling(EventsManager eventsManager) {
@@ -100,172 +82,42 @@ public class MobsimScopeEventHandling implements StartupListener, AfterMobsimLis
 	@Inject
 	private IterationCounter iterationCounter;
 
-	@Inject
-	private MatsimServices matsimServices;
 
 	@Inject
 	private Config config;
 
-	@Inject
-	private UrbanEVConfigGroup urbanEVConfig;
+	// @Inject
+	// private UrbanEVConfigGroup urbanEVConfig;
 
 	public void addMobsimScopeHandler(MobsimScopeEventHandler handler) {
 		eventHandlers.add(handler);
 		eventsManager.addHandler(handler);
 	}
 
-
+	// Gets fired once in every MATSim run (multiple times when having initialization runs)
 	@Override
 	public void notifyStartup(StartupEvent startupEvent) {
-		lastIteration = config.controler().getLastIteration();
-		endTime = config.qsim().getEndTime().seconds();
-		strategyManager = matsimServices.getStrategyManager();
 
-        population.getPersons().forEach((personId, person) -> {
-
-			// add default range anxiety threshold to person attributes if none given
-			if (person.getAttributes().getAttribute("rangeAnxietyThreshold") == null) {
-				person.getAttributes().putAttribute("rangeAnxietyThreshold", String.valueOf(urbanEVConfig.getDefaultRangeAnxietyThreshold()));
-			}
-
-			// add work and home chargers
-			// Todo: Generalize this for any kind of private charging infrastructure
-
-			double homeChargerPower;
-			double workChargerPower;
-
-			// Determine home charging power
-			if(!urbanEVConfig.isGenerateHomeChargersByPercentage()) {
-				// Generate home chargers based on population attributes
-				homeChargerPower = person.getAttributes().getAttribute("homeChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("homeChargerPower").toString()) : 0.0;
-			} else {
-				if(random.nextDouble()<=urbanEVConfig.getHomeChargerPercentage()/100.0){
-					// Randomly assign home charger with the corresponding probability
-					homeChargerPower = urbanEVConfig.getDefaultHomeChargerPower();
-				} else {
-					homeChargerPower = 0.0;
-				}
-			}
-
-			// Determine work charging power
-			if(!urbanEVConfig.isGenerateWorkChargersByPercentage()) {
-				// Generate work chargers based on population attributes
-				workChargerPower = person.getAttributes().getAttribute("workChargerPower") != null ? Double.parseDouble(person.getAttributes().getAttribute("workChargerPower").toString()) : 0.0;
-			} else {
-				if(random.nextDouble()<=urbanEVConfig.getWorkChargerPercentage()/100.0){
-					// Randomly assign work charger with the corresponding probability
-					workChargerPower = urbanEVConfig.getDefaultWorkChargerPower();
-				} else {
-					workChargerPower = 0.0;
-				}
-			}
-
-			// Add home and work chargers if necessary
-			if(homeChargerPower!=0.0) addPrivateCharger(person, "home", homeChargerPower);
-			if(workChargerPower!=0.0) addPrivateCharger(person, "work", workChargerPower);
-
-        });
-
-        // Write final chargers to file
+		// Write final chargers to file
 		ChargerWriter chargerWriter = new ChargerWriter(chargingInfrastructureSpecification.getChargerSpecifications().values().stream());
 		chargerWriter.write(config.controler().getOutputDirectory().concat("/chargers_complete.xml"));
 	}
 
 	@Override
 	public void notifyAfterMobsim(AfterMobsimEvent event) {
-		iterationNumber = iterationCounter.getIterationNumber();
+		
 		eventHandlers.forEach(eventsManager::removeHandler);
 		eventHandlers.clear();
 
-		// Todo: Check and revise this whole part
-		if (iterationNumber == lastIteration && endTime/(24*60*60)>1 && endTime%(24*60*60)==0 && lastIteration!=0) {
-			// get average soc distribution
-			int socDistibutionAtMidnight[] = new int[11];
-			AtomicInteger n = new AtomicInteger();
-			List<String[]> socs = CSVReaders.readTSV(Paths.get(controlerIO.getIterationFilename(iterationNumber, "soc_histogram_time_profiles.txt")).toString());
-			socs.forEach(row -> {
-				if (!row[0].equals("time")) {
-					double time = Time.parseTime(row[0]);
-					if (time > 0.3 * endTime && time % (24*60*60) == 0 && time < 0.8 * endTime) {
-						for (int i = 1; i < row.length; i++) {
-							socDistibutionAtMidnight[i-1] += Integer.parseInt(row[i]);
-						}
-						n.getAndIncrement();
-					}
-				}
-			});
-
-			// find relative soc distribution at midnight
-			double relativeSocDistribution[] = new double[11];
-			double sum = 0;
-			for (int value : socDistibutionAtMidnight) {
-				sum += value;
-			}
-			for (int i = 0; i < relativeSocDistribution.length; i++) {
-				relativeSocDistribution[i] = socDistibutionAtMidnight[i] / sum;
-			}
-
-			// update start socs
-			electricFleetSpecification.getVehicleSpecifications().forEach((id, ev) -> {
-
-				double startSoc = 0.0;
-				while (startSoc < urbanEVConfig.getDefaultRangeAnxietyThreshold()) {
-					double r = random.nextDouble();
-					double distributionSum = 0;
-					for (int i = 0; i < relativeSocDistribution.length; i++) {
-						distributionSum += relativeSocDistribution[i];
-						if (r < distributionSum) {
-							startSoc = 0.1 * ((double) i - random.nextDouble());
-							break;
-						}
-					}
-				}
-
-				double initialSoc = startSoc * ev.getBatteryCapacity();
-
-				ElectricVehicleSpecification electricVehicleSpecification = ImmutableElectricVehicleSpecification.newBuilder()
-						.id(id)
-						.vehicleType(ev.getVehicleType())
-						.chargerTypes(ev.getChargerTypes())
-						.initialSoc(initialSoc)
-						.batteryCapacity(ev.getBatteryCapacity())
-						.build();
-
-				electricFleetSpecification.replaceVehicleSpecification(electricVehicleSpecification);
-			});
+		if (iterationCounter.getIterationNumber() == lastIteration) {
 			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
 			electricFleetWriter.write(Paths.get(controlerIO.getOutputPath(),"output_evehicles.xml").toString());
 		}
-	}
-
-
-	private void addPrivateCharger(Person person, String activityType, double power) {
-		String ownerId = person.getId().toString();
-		String chargerId = ownerId + "_" + activityType;
-		Coord actCoord = new Coord();
-		for (PlanElement planElement : person.getSelectedPlan().getPlanElements()) {
-			if (planElement instanceof Activity) {
-				Activity act = (Activity) planElement;
-				if (act.getType().startsWith(activityType)) {
-					actCoord = act.getCoord();
-					break;
-				}
-			}
+		else
+		{
+			ElectricFleetWriter electricFleetWriter = new ElectricFleetWriter(electricFleetSpecification.getVehicleSpecifications().values().stream());
+			electricFleetWriter.write(Paths.get(controlerIO.getIterationFilename(iterationCounter.getIterationNumber(), "evehicles.xml")).toString());
 		}
-		String chargerType = ChargerSpecification.DEFAULT_CHARGER_TYPE;
-		int plugCount = ChargerSpecification.DEFAULT_PLUG_COUNT;
-		List<Id<ElectricVehicle>> allowedEvIds = new ArrayList();
-		allowedEvIds.add(Id.create(ownerId, ElectricVehicle.class));
-
-		ChargerSpecification chargerSpecification = ImmutableChargerSpecification.newBuilder()
-				.id(Id.create(chargerId, Charger.class))
-				.coord(new Coord(actCoord.getX(), actCoord.getY()))
-				.chargerType(chargerType)
-				.plugPower(EvUnits.kW_to_W(power))
-				.plugCount(plugCount)
-				.allowedVehicles(allowedEvIds)
-				.build();
-
-		chargingInfrastructureSpecification.addChargerSpecification(chargerSpecification);
 	}
+
 }
