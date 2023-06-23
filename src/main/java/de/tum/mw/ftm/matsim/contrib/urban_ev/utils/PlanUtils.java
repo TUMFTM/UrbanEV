@@ -63,6 +63,27 @@ public class PlanUtils {
         return activities;
     }
 
+	public static int getActivityIndex(Activity activity, List<Activity> activities)
+	{
+		return activities.indexOf(activity);
+	}
+
+	public static Activity getNextActivity(Activity activity, List<Activity> activities)
+	{
+		return activities.get(
+			Math.min(activities.size()-1, 
+			activities.indexOf(activity)+1
+			)); // get the next or last Activity
+	}
+
+	public static Activity getPreviousActivity(Activity activity, List<Activity> activities)
+	{
+		return activities.get(
+			Math.max(0, 
+			activities.indexOf(activity)-1
+			)); // get the previous or first Activity
+	}
+
 	public static List<Activity> getActivityTypeContains(List<Activity> activities, String type){
 		return activities
 		.stream()
@@ -152,6 +173,12 @@ public class PlanUtils {
         }
     }
 
+	public static void switchChargingActivities(Activity chargingActivity, Activity nonChargingActivity)
+	{
+		unsetCharging(chargingActivity);
+		setCharging(nonChargingActivity);
+	}
+
     public static int getRandomInt(int max)
     {
         Random random = MatsimRandom.getLocalInstance();
@@ -177,7 +204,10 @@ public class PlanUtils {
 
 	public static void setCharging(Activity activity)
 	{
-		activity.setType(activity.getType() + ACTTYPE_CHARGING);
+		if(!isCharging(activity))
+		{
+			activity.setType(activity.getType() + ACTTYPE_CHARGING);
+		}
 	}
 
 	public static void unsetCharging(Activity activity)
