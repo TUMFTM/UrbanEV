@@ -244,7 +244,7 @@ public class VehicleChargingHandler
 					// Sort all such activities by their end times
 					allActivities = PlanUtils.sortByEndTime(allActivities.stream().filter(a -> a.getEndTime().isDefined()).collect(Collectors.toList()));
 					
-					// Check whether actitivies at the same location normally lead to hogging or not (majority vote)					
+					// Check whether actitivies at the same location normally lead to hogging or not 
 					int hoggingCount = 0;
 
 					for(Activity act: activitiesAtSameCoord)
@@ -253,21 +253,15 @@ public class VehicleChargingHandler
 						int lastActInd = allActivities.indexOf(act)-1;
 						double virtualPlugIn = allActivities.get(lastActInd).getEndTime().seconds();
 						double virtualPlugOut = act.getEndTime().seconds();
-						
 
-						// Check if they would lead to hogging in the majority of cases
+						// Check if they would lead to hogging
 						if(isHogging(virtualPlugIn, virtualPlugOut, hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes))
 						{
 							hoggingCount++;
 						}
-						else
-						{
-							hoggingCount--;
-						}
-
 					}
 
-					// Determine hogging state of the first activity by comparison with the usual case
+					// Determine hogging state of the first activity by randomization with the same chance as other similar acts
 					hogging = hoggingCount>0;
 
 				}
