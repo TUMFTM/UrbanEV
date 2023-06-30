@@ -4,7 +4,9 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.EvModule;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.charging.VehicleChargingHandler;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.config.UrbanEVConfigGroup;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.planning.ChangeChargingBehaviour;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.planning.FineTuningReplanner;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.FineTuningChargingBehaviorScoring;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringParameters;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
@@ -157,6 +159,7 @@ public class RunMATSimUrbanEV {
 			@Override
 			public void install() {
 				addPlanStrategyBinding("ChangeChargingBehaviour").toProvider(ChangeChargingBehaviour.class);
+				addPlanStrategyBinding("FineTuningPlanner").toProvider(FineTuningReplanner.class);
 			}
 		});
 
@@ -166,7 +169,10 @@ public class RunMATSimUrbanEV {
 			public ScoringFunction createNewScoringFunction(Person person) {
 				ChargingBehaviourScoringParameters chargingBehaviourScoringParameters = new ChargingBehaviourScoringParameters.Builder(scenario).build();
 				SumScoringFunction sumScoringFunction = new SumScoringFunction();
-				sumScoringFunction.addScoringFunction(new ChargingBehaviourScoring(chargingBehaviourScoringParameters, person));
+				
+				//sumScoringFunction.addScoringFunction(new ChargingBehaviourScoring(chargingBehaviourScoringParameters, person));
+				sumScoringFunction.addScoringFunction(new FineTuningChargingBehaviorScoring(chargingBehaviourScoringParameters, person));
+
 				return sumScoringFunction;
 			}
 		});
