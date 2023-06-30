@@ -65,7 +65,6 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
                 ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger(); 
 
                 double soc = chargingBehaviourScoringEvent.getSoc();
-                double socDiff = chargingBehaviourScoringEvent.getSocDiff();
 
                 boolean isEndAct = PlanUtils.isEndAct(activityType);
                 boolean isActStart = scoreTrigger==ScoreTrigger.ACTIVITYSTART;
