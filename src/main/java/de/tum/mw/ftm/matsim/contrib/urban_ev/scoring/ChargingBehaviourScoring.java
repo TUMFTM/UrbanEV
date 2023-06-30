@@ -6,6 +6,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEve
 import de.tum.mw.ftm.matsim.contrib.urban_ev.stats.ChargingBehaviorScoresCollector;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PersonUtils;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ScoreComponents;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
@@ -14,17 +15,6 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.scoring.SumScoringFunction;
 
 public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEventScoring {
-
-    public enum ScoreComponents {
-        RANGE_ANXIETY,
-        EMPTY_BATTERY,
-        WALKING_DISTANCE,
-        HOME_CHARGING,
-        ENERGY_BALANCE, 
-        OPPORTUNITY_CHARGING, 
-        STATION_HOGGING, 
-        BATTERY_HEALTH
-    }
 
     private double score;
 

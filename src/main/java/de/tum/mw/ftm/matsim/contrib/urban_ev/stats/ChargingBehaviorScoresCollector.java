@@ -1,6 +1,6 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.stats;
 
-import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoring;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ScoreComponents;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 
@@ -28,7 +28,7 @@ public class ChargingBehaviorScoresCollector {
     public void collect(
         Id<Person> personId,
         double time,
-        ChargingBehaviourScoring.ScoreComponents scoreComponent,
+        ScoreComponents scoreComponent,
         double value
         )
     {
