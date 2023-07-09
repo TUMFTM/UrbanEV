@@ -168,9 +168,6 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
         // empty battery
         double delta_score = params.utilityOfEmptyBattery;
         collectScores(personId, time, ScoreComponents.EMPTY_BATTERY, delta_score);
-            
-        // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-        PersonUtils.setCritical(person);
 
         return delta_score;
     }
