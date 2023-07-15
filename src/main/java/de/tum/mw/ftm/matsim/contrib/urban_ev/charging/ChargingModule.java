@@ -49,7 +49,7 @@ public class ChargingModule extends AbstractModule {
 
 			@Override
 			public ChargingLogic.Factory get() {
-				return charger -> new ChargingLogicImpl(charger, new ChargeUpToMaxSocStrategy(charger, 1.),
+				return charger -> new ChargingLogicImpl(charger, new ChargeUpToTypeMaxSocStrategy(charger),
 						eventsManager);
 			}
 		});
