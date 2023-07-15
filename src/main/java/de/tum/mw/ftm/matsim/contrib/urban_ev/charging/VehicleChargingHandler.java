@@ -318,21 +318,12 @@ public class VehicleChargingHandler
 
 		List<Charger> filteredChargers = new ArrayList<>();
 
-		chargingInfrastructure.getChargers().values().forEach(charger -> {
-			// filter out private chargers unless vehicle is allowed
-			if (charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId())) {
-				// filter out chargers that are out of range
-				if (DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius) {
-					// filter out chargers with wrong type
-					if (electricVehicle.getChargerTypes().contains(charger.getChargerType())) {
-						// filter out occupied chargers
-						if ((charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())) {
-							filteredChargers.add(charger);
-						}
-					}
-				}
-			}
-		});
+		filteredChargers = chargingInfrastructure.getChargers().values().stream()
+				.filter(charger -> charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId()))		
+				.filter(charger -> DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius)
+				.filter(charger -> electricVehicle.getChargerTypes().contains(charger.getChargerType()))
+				.filter(charger -> charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())
+                .collect(Collectors.toList());
 
 		return filteredChargers;
 	}
