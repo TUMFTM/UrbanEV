@@ -139,17 +139,10 @@ public class VehicleChargingHandler
 
 					// Location choice
 					List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
-					Charger selectedCharger = null;
-
-					// Use private charger if possible
-					for(Charger charger : suitableChargers)
-					{
-						if (charger.getAllowedVehicles().contains(evId))
-						{
-							selectedCharger = charger;
-							break;
-						}
-					}
+					Charger selectedCharger = suitableChargers.stream()
+						.filter(charger -> charger.getAllowedVehicles().contains(evId))
+                    	.findFirst()
+                    	.orElse(null);
 
 					// Select public charger if no private charger is available
 					if(selectedCharger == null)
