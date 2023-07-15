@@ -44,8 +44,6 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
         this.hasChargerAtHome = PersonUtils.hasHomeCharger(person);
         this.hasChargerAtWork = PersonUtils.hasWorkCharger(person);
         this.opportunityCharging = PersonUtils.isOpportunityCharging(person);
-
-        PersonUtils.setAttr(person, "rangeAnxietyScoredAlready", false);
         
     }
 
@@ -132,7 +130,6 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
             value);
     }
 
-
     private double scoreWalking(double walkingDistance, double time)
     {
 
@@ -172,15 +169,6 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
         return delta_score;
     }
 
-    private double scoreOpportunityCharging(double time)
-    {
-        // agent failed to opportunity charge even though it should have
-        double delta_score = params.failedOpportunityChargingUtility;   
-        collectScores(personId, time, ScoreComponents.OPPORTUNITY_CHARGING, delta_score);
-        
-        return delta_score;
-    }
-
     @Override public void finish() {}
 
     @Override
@@ -188,31 +176,5 @@ public class FineTuningChargingBehaviorScoring implements SumScoringFunction.Arb
         return score;
     }
 
-    private boolean successfulOpportunityCharging(Person person){
-        
-        boolean planContainsSuccessfulOpportunityCharging = false;
-
-        for(Activity act:PlanUtils.getActivities(person.getSelectedPlan())){
-
-            if(PlanUtils.isCharging(act) && !PlanUtils.isFailed(act))
-            {
-                boolean isPrivateHomeCharging = PlanUtils.isHome(act) && hasChargerAtHome;
-                boolean isPrivateWorkCharging = PlanUtils.isWork(act) && hasChargerAtWork;
-
-                if(!isPrivateHomeCharging && !isPrivateWorkCharging)
-                {
-                    // plan contains a successful opportunity charging activity in case there is a charging activity that
-                    // is non-home, non-work, did not fail and is not the last activity
-                    planContainsSuccessfulOpportunityCharging = true;
-                    break;
-                }
-            }
-            
-
-        }
-
-        return planContainsSuccessfulOpportunityCharging;
-
-    }
 
 }
