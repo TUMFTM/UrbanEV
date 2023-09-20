@@ -31,7 +31,7 @@ public class FineTuningPlannerStrategy implements PlanStrategyModule {
         Person person = plan.getPerson();
 
         // derived person characteristics
-        boolean personHasPrivateCharger = PersonUtils.hasPrivateCharger(person);  
+        boolean personHasHomeCharger = PersonUtils.hasHomeCharger(person);
 
         // person plan analysis
         List<Activity> activities = PlanUtils.getActivities(plan);
@@ -47,12 +47,12 @@ public class FineTuningPlannerStrategy implements PlanStrategyModule {
         // Remove failed charging activities
         failedChargingActs.forEach((act) -> {PlanUtils.unsetFailed(act);});
 
-        // Only handle plans of persons who do not have a private charger
-        // Everyone else charges stochastically depending on the initialization
-        if(!personHasPrivateCharger && !allChargingActs.isEmpty())
+        // Only handle plans of persons who do not have a private home charger
+        // Owners of home chargers charge stochastically depending on the initialization
+        if(!personHasHomeCharger && !allChargingActs.isEmpty())
         {
             
-            // All persons, who cannot charge privately can adjust the position of charging activities
+            // All persons, who cannot charge privately at home can adjust the position of charging activities
             Activity randomChargingActivity = PlanUtils.getRandomActivity(allChargingActs);
 
             // Try to move charging activity forward or backward
