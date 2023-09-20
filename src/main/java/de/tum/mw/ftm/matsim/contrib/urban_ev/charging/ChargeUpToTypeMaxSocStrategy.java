@@ -42,14 +42,14 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
  * @author Michal Maciejewski (michalm)
  */
 public class ChargeUpToTypeMaxSocStrategy implements ChargingStrategy {
+	
 	private final Charger charger;
 	private final double maxRelativeSoc;
 
-	private final Map<String,Double> maxRelativeSocByChargerType = Stream.of(new Object[][] {{ "private_ac", 0.8 },{ "public_dc", 0.8 }, { "public_ac", 0.9 }, { "default", 0.5 }}).collect(Collectors.toMap(data -> (String) data[0], data -> (double) data[1]));
-
+	
 	public ChargeUpToTypeMaxSocStrategy(Charger charger) {
 
-		this.maxRelativeSoc = maxRelativeSocByChargerType.getOrDefault(charger.getChargerType(), 1.0);
+		this.maxRelativeSoc = getMaxRelativeSoc(charger);
 
 		if (maxRelativeSoc < 0 || maxRelativeSoc > 1) {
 			throw new IllegalArgumentException();
@@ -66,5 +66,11 @@ public class ChargeUpToTypeMaxSocStrategy implements ChargingStrategy {
 	@Override
 	public double calcRemainingTimeToCharge(ElectricVehicle ev) {
 		return ((BatteryCharging)ev.getChargingPower()).calcChargingTime(charger, calcRemainingEnergyToCharge(ev));
+	}
+
+	public static double getMaxRelativeSoc(Charger charger)
+	{
+		final Map<String,Double> maxRelativeSocByChargerType = Stream.of(new Object[][] {{ "private_ac", 0.8 },{ "public_dc", 0.8 }, { "public_ac", 0.9 }, { "default", 0.5 }}).collect(Collectors.toMap(data -> (String) data[0], data -> (double) data[1]));
+		return maxRelativeSocByChargerType.getOrDefault(charger.getChargerType(), 1.0);
 	}
 }
