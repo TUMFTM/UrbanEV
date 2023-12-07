@@ -30,38 +30,47 @@ email	:	lennart.adenaw@tum.de
 
 package de.tum.mw.ftm.matsim.contrib.urban_ev.charging;
 
-import com.google.inject.Inject;
-import com.google.inject.Provider;
-import de.tum.mw.ftm.matsim.contrib.urban_ev.EvModule;
-import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.mobsim.qsim.AbstractQSimModule;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.Battery;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
 
 /**
  * @author Michal Maciejewski (michalm)
  */
-public class ChargingModule extends AbstractModule {
+public class ChargeUpToIndiSocStrategy implements ChargingStrategy {
+	private final Charger charger;
+	private final double maxRelativeSoc;
+
+	public ChargeUpToIndiSocStrategy(Charger charger, double maxRelativeSoc) {
+
+		this.charger = charger;
+	
+		if (charger.getId().toString().contains("work") || charger.getId().toString().contains("home")){
+			maxRelativeSoc = 0.8;
+		}else{
+
+			if (charger.getChargerType().contains("default")){
+				maxRelativeSoc = 0.9;
+			}
+			else{
+				maxRelativeSoc = 0.8;
+			}
+		}
+
+		if (maxRelativeSoc < 0 || maxRelativeSoc > 1) {
+			throw new IllegalArgumentException();
+		}
+		this.maxRelativeSoc = maxRelativeSoc;
+	}
+
 	@Override
-	public void install() {
-		bind(ChargingLogic.Factory.class).toProvider(new Provider<ChargingLogic.Factory>() {
-			@Inject
-			private EventsManager eventsManager;
+	public double calcRemainingEnergyToCharge(ElectricVehicle ev) {
+		Battery battery = ev.getBattery();
+		return maxRelativeSoc * battery.getCapacity() - battery.getSoc();
+	}
 
-			@Override
-			public ChargingLogic.Factory get() {
-				//return charger -> new ChargingLogicImpl(charger, new ChargeUpToMaxSocStrategy(charger, 1.), eventsManager);
-				return charger -> new ChargingLogicImpl(charger, new ChargeUpToIndiSocStrategy(charger, 1.), eventsManager);
-			}
-		});
-
-		bind(ChargingPower.Factory.class).toInstance(ev -> VariableSpeedCharging.createForMaxChargingRate(ev));
-
-		installQSimModule(new AbstractQSimModule() {
-			@Override
-			protected void configureQSim() {
-				this.bind(ChargingHandler.class).asEagerSingleton();
-				this.addQSimComponentBinding(EvModule.EV_COMPONENT).to(ChargingHandler.class);
-			}
-		});
+	@Override
+	public double calcRemainingTimeToCharge(ElectricVehicle ev) {
+		return ((BatteryCharging)ev.getChargingPower()).calcChargingTime(charger, calcRemainingEnergyToCharge(ev));
 	}
 }

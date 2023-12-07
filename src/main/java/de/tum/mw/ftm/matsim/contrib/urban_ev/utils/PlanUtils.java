@@ -152,7 +152,15 @@ public class PlanUtils {
 	{
 		return isHome(activity.getType());
 	}
+	public static boolean isFastCharging(String actType)
+	{
+		return actType.contains("fast charging");
+	}
 
+	public static boolean isFastCharging(Activity activity)
+	{
+		return isFastCharging(activity.getType());
+	}
 	public static boolean isWork(String actType)
 	{
 		return actType.contains("work") && !actType.contains("_related");
