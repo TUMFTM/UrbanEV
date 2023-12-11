@@ -212,10 +212,10 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						Double.toString(e.getPluggedDuration()),
 						Double.toString(Math.round(e.getChargingRatio()*1000.0)/1000.0),
 						Double.toString(Math.round(e.getStartSOC()*1000.0)/1000.0),
-						Double.toString(Math.round(EvUnits.J_to_kWh(e.getStartSOC_J()*1000.0)/1000.0)),
+						Double.toString(Math.round(EvUnits.J_to_kWh(e.getStartSOC_J()*1000.0))/1000.0),
 						Double.toString(Math.round(e.getEndSOC()*1000.0)/1000.0),
-						Double.toString(Math.round(EvUnits.J_to_kWh(e.getEndSOC_J()*1000.0)/1000.0)),
-						Double.toString(Math.round(EvUnits.J_to_kWh(e.getTransmittedEnergy_J()*1000.0)/1000.0)),
+						Double.toString(Math.round(EvUnits.J_to_kWh(e.getEndSOC_J()*1000.0))/1000.0),
+						Double.toString(Math.round(EvUnits.J_to_kWh(e.getTransmittedEnergy_J()*1000.0))/1000.0),
 						Double.toString(Math.round(e.getWalkingDistance()*1000.0)/1000.0)
 						);
 			}

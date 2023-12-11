@@ -12,9 +12,9 @@ import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.core.gbl.MatsimRandom;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.routing.EvNetworkRoutingProvider;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.routing.EvNetworkRoutingModule;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.router.RoutingModule;
@@ -81,10 +81,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         List<Leg> legs = plan.getPlanElements().stream().filter(f -> f instanceof Leg).map(pe -> (Leg) pe).collect(Collectors.toList());
         // person plan analysis
         List<Activity> activities = PlanUtils.getActivities(plan);
-        List<Activity> nonStartOrEndActs = PlanUtils.getActivityTypeNotEquals(PlanUtils.getActivityTypeNotContains(activities, "end"), "");
+        List<Activity> nonStartOrEndActs = PlanUtils.getNonIniEndActivities(activities);
 
-        List<Activity> homeActs = PlanUtils.getActivityTypeContains(nonStartOrEndActs, "home");
-        List<Activity> workActs = PlanUtils.getActivityTypeNotContains(PlanUtils.getActivityTypeContains(nonStartOrEndActs, "work"), "work_related");
+        List<Activity> homeActs = PlanUtils.getHomeActivities(nonStartOrEndActs);
+        List<Activity> workActs = PlanUtils.getWorkActivities(nonStartOrEndActs);
         List<Activity> otherActs = nonStartOrEndActs.stream().filter(a -> !homeActs.contains(a) & !workActs.contains(a)).collect(Collectors.toList());
 
         // Apply plan changes
@@ -94,8 +94,8 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
         List<Activity> allChargingActs = PlanUtils.getChargingActivities(nonStartOrEndActs);
         List<Activity> noChargingActs = PlanUtils.getNonChargingActivities(nonStartOrEndActs);
 
-        List<Activity> failedChargingActs = PlanUtils.getActivityTypeContains(allChargingActs, "failed");
-        List<Activity> successfulChargingActs = PlanUtils.getActivityTypeNotContains(allChargingActs, "failed");
+        List<Activity> failedChargingActs = PlanUtils.getFailedChargingActivities(allChargingActs);
+        List<Activity> successfulChargingActs = PlanUtils.getSuccessfulChargingActivities(allChargingActs);
 
         List<Activity> homeActsWithCharging = PlanUtils.getChargingActivities(homeActs);
         List<Activity> workActsWithCharging = PlanUtils.getChargingActivities(workActs);
@@ -114,23 +114,23 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
             // If the person has a critical soc, add a charging activity
   /*           if(personHasHomeCharger & !homeActsWithoutCharging.isEmpty()){
                 // critical soc and home charger
-                addRandomChargingActivity(homeActsWithoutCharging);
+                PlanUtils.addRandomChargingActivity(homeActsWithoutCharging);
             }
             else if(personHasWorkCharger & !workActsWithoutCharging.isEmpty()){
                 // critical soc and work, but no home charger 
-                addRandomChargingActivity(workActsWithoutCharging);
+                PlanUtils.addRandomChargingActivity(workActsWithoutCharging);
             }
             else if(!homeActsWithoutCharging.isEmpty()){
                 // if the person has to charge publicly, charging close to home is still preferred
-                addRandomChargingActivity(homeActsWithoutCharging);
+                PlanUtils.addRandomChargingActivity(homeActsWithoutCharging);
             }
             else if(!workActsWithoutCharging.isEmpty()){
                 // if the person has to charge publicly but can not charge close to home, charging close to work is preferred
-                addRandomChargingActivity(workActsWithoutCharging);
+                PlanUtils.addRandomChargingActivity(workActsWithoutCharging);
             }
             else if(!otherActsWithoutCharging.isEmpty()){
                 // critical soc, but person can not charge close to home or work
-                addRandomChargingActivity(otherActsWithoutCharging); // Add charging activity to any activity without charging
+                PlanUtils.addRandomChargingActivity(otherActsWithoutCharging); // Add charging activity to any activity without charging
             }
             else{ */
                 plan = insertfastcharging(plan,tripRouter,getRandomInt(legs.size()));
@@ -140,10 +140,10 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
             // non-critical soc: add, change, or remove charging activities
             // constraint: always make sure that people who are flagged as taking part in opportunity charging will continue to do so
-            ArrayList<ChargingStrategyChange> viableChanges = new ArrayList<ChargingStrategyChange>();
-
             if(personHasPrivateCharger)
             {
+
+                ArrayList<ChargingStrategyChange> viableChanges = new ArrayList<ChargingStrategyChange>();
 
                 // Person has both, home and work charger
                 // All options (case dependend): 
@@ -191,51 +191,51 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
 
                 if(!viableChanges.isEmpty()) // If there are any viable actions...
                 {
-                    ChargingStrategyChange randomAction = viableChanges.get(getRandomInt(viableChanges.size())); // ...select a random action ...
+                    ChargingStrategyChange randomAction = viableChanges.get(PlanUtils.getRandomInt(viableChanges.size())); // ...select a random action ...
 
                     switch(randomAction) { // ...and execute it. If there are no viable actions the person should still be fine, because they are "uncritical" -> do not change anything
                         case REMOVEWORK_ADDHOME:
-                            changeRandomChargingActivity(workActsWithCharging, homeActsWithoutCharging);
+                            PlanUtils.changeRandomChargingActivity(workActsWithCharging, homeActsWithoutCharging);
                             break;
                         case REMOVEHOME_ADDWORK:
                             // Remove home, add work charging
-                            changeRandomChargingActivity(homeActsWithCharging, workActsWithoutCharging);
+                            PlanUtils.changeRandomChargingActivity(homeActsWithCharging, workActsWithoutCharging);
                             break;
                         case REMOVEWORK_ADDWORK:
                             // Remove work, add work
-                            changeRandomChargingActivity(workActsWithCharging, workActsWithoutCharging);
+                            PlanUtils.changeRandomChargingActivity(workActsWithCharging, workActsWithoutCharging);
                             break;
                         case REMOVEHOME_ADDHOME:
                             // Remove home, add home
-                            changeRandomChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
+                            PlanUtils.changeRandomChargingActivity(homeActsWithCharging, homeActsWithoutCharging);
                             break;
                         case ADDHOME: 
                             // Add home
-                            addRandomChargingActivity(homeActsWithoutCharging);
+                            PlanUtils.addRandomChargingActivity(homeActsWithoutCharging);
                             break;
                         case ADDWORK: 
                             // Add work
-                            addRandomChargingActivity(workActsWithoutCharging);
+                            PlanUtils.addRandomChargingActivity(workActsWithoutCharging);
                             break;
                         case ADDOTHER: 
                             // Add other
-                            addRandomChargingActivity(otherActsWithoutCharging);
+                            PlanUtils.addRandomChargingActivity(otherActsWithoutCharging);
                             break;
                         case REMOVEHOME:
                             // Remove home
-                            removeRandomChargingActivity(homeActsWithCharging);
+                            PlanUtils.removeRandomChargingActivity(homeActsWithCharging);
                             break;
                         case REMOVEWORK: 
                             // Remove work
-                            removeRandomChargingActivity(workActsWithCharging);
+                            PlanUtils.removeRandomChargingActivity(workActsWithCharging);
                             break;
                         case REMOVEOTHER: 
                             // Remove other, add other
-                            removeRandomChargingActivity(otherActsWithCharging);
+                            PlanUtils.removeRandomChargingActivity(otherActsWithCharging);
                             break;
                         case REMOVEOTHER_ADDOTHER: 
                             // Remove other, add other
-                            changeRandomChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
+                            PlanUtils.changeRandomChargingActivity(otherActsWithCharging, otherActsWithoutCharging);
                             break;
                     }
                 }
@@ -247,20 +247,21 @@ public class ChangeChargingBehaviourModule implements PlanStrategyModule {
                 // Person has no private charger and is entirely reliant on public chargers
                 // -> Randomly change, remove, or add a charging activity with equal probability
 
+
                 switch(getRandomInt(5)) {
                     case 0:
                         if(!noChargingActs.isEmpty()&&!allChargingActs.isEmpty()){
-                            changeRandomChargingActivity(allChargingActs, noChargingActs);
+                            PlanUtils.changeRandomChargingActivity(allChargingActs, noChargingActs);
                         }
                         break;
                     case 1:
                         if(!successfulChargingActs.isEmpty()){
-                            removeRandomChargingActivity(allChargingActs);
+                            PlanUtils.removeRandomChargingActivity(allChargingActs);
                         }
                         break;
                     case 2:
                         if(!noChargingActs.isEmpty()){
-                            addRandomChargingActivity(noChargingActs);
+                            PlanUtils.addRandomChargingActivity(noChargingActs);
                         }
                         break;
                     case 3:

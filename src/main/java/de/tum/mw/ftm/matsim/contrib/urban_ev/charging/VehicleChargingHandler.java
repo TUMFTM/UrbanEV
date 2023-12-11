@@ -42,6 +42,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.ChargingInfrastructu
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
+import de.tum.mw.ftm.matsim.contrib.urban_ev.charging.ChargeUpToTypeMaxSocStrategy;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
@@ -78,6 +79,8 @@ public class VehicleChargingHandler
 	public static final Integer SECONDS_PER_MINUTE = 60;
 	public static final Integer SECONDS_PER_HOUR = 60*SECONDS_PER_MINUTE;
 	public static final Integer SECONDS_PER_DAY = 24*SECONDS_PER_HOUR;
+	
+	// State variables
 	private Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = new HashMap<>();
 
 	private final ChargingInfrastructure chargingInfrastructure;
@@ -130,7 +133,8 @@ public class VehicleChargingHandler
 				ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
 				Person person = population.getPersons().get(personId);
 				double walkingDistance = 0.0;
-				double time = event.getTime();
+				double soc = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+				double time = event.getTime();			
 
 				if (PlanUtils.isCharging(actType)) {
 					
@@ -140,6 +144,14 @@ public class VehicleChargingHandler
 					//Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 					Coord activityCoord = event.getCoord();
 					// Location choice
+          
+          //charging_behavior_rework: Post-Merge work neccessary!
+					//List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
+					//Charger selectedCharger = suitableChargers.stream()
+					//	.filter(charger -> charger.getAllowedVehicles().contains(evId))
+          //          	.findFirst()
+          //          	.orElse(null);
+
 					List<Charger> suitableChargers;
 					if(event.getActType()=="car fast charging"){
 						suitableChargers = findSuitableChargers(activityCoord, ev,true);
@@ -164,22 +176,21 @@ public class VehicleChargingHandler
 					{
 						selectedCharger = selectCharger(suitableChargers, activityCoord, ChargerSelectionMethod.CLOSEST);
 					}
-					
-					// Start charging if possible
-					if (selectedCharger != null) { // if charger was found, start charging
+				
+					// Start charging if charger was found and soc is lower than anticipated end soc
+					if (selectedCharger != null && soc<ChargeUpToTypeMaxSocStrategy.getMaxRelativeSoc(selectedCharger)) { 
 						selectedCharger.getLogic().addVehicle(ev, time);
 						vehiclesAtChargers.put(evId, selectedCharger.getId());
 						walkingDistance = DistanceUtils.calculateDistance(
 								activityCoord, selectedCharger.getCoord());
 					} else {
-						// if no charger was found, mark as failed attempt in plan if not already marked
+						// if no charger was found, or charging would be ineffective, mark as failed attempt in plan if not already marked
 						if (activity != null) {
 							PlanUtils.setFailed(activity);
 						}
 					}
 				}
 
-				double socUponArrival = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 				double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
 
 				// Issue a charging behaviour scoring event
@@ -188,7 +199,7 @@ public class VehicleChargingHandler
 					time,
 					personId,
 					actType,
-					socUponArrival,
+					soc,
 					startSoc,
 					walkingDistance,
 					0.0,
@@ -198,7 +209,7 @@ public class VehicleChargingHandler
 					);
 			}
 		}
-	}
+	}  
 
 	@Override
 	public void handleEvent(ActivityEndEvent event) {
@@ -210,6 +221,14 @@ public class VehicleChargingHandler
 		double startSoc = ev.getBattery().getStartSoc() / ev.getBattery().getCapacity();
 		double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 		double time = event.getTime();
+
+		//ArrayList<ElectricVehicle> vehiclesAtChargers = chargingInfrastructure.getChargers().values().stream().map(c -> c.getLogic().getPluggedVehicles()).collect(Collectors.toList());
+
+		//List<ElectricVehicle> vehiclesAtChargers = chargingInfrastructure.getChargers().values().stream().flatMap(a -> a.getLogic().getPluggedVehicles().stream()).collect(Collectors.toList());
+
+		// Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = chargingInfrastructure.getChargers().values().stream()
+        // .flatMap(a -> a.getLogic().getPluggedVehicles().stream())
+        // .collect(Collectors.toMap(ElectricVehicle::getId, a -> a.getId()));
 
 		// If the vehicle is currently plugged in
 		if(vehiclesAtChargers.containsKey(evId))
@@ -252,7 +271,7 @@ public class VehicleChargingHandler
 					// Sort all such activities by their end times
 					allActivities = PlanUtils.sortByEndTime(allActivities.stream().filter(a -> a.getEndTime().isDefined()).collect(Collectors.toList()));
 					
-					// Check whether actitivies at the same location normally lead to hogging or not (majority vote)					
+					// Check whether actitivies at the same location normally lead to hogging or not 
 					int hoggingCount = 0;
 
 					for(Activity act: activitiesAtSameCoord)
@@ -261,21 +280,15 @@ public class VehicleChargingHandler
 						int lastActInd = allActivities.indexOf(act)-1;
 						double virtualPlugIn = allActivities.get(lastActInd).getEndTime().seconds();
 						double virtualPlugOut = act.getEndTime().seconds();
-						
 
-						// Check if they would lead to hogging in the majority of cases
+						// Check if they would lead to hogging
 						if(isHogging(virtualPlugIn, virtualPlugOut, hoggingExemptionHourStart, hoggingExemptionHourStop, hoggingThresholdMinutes))
 						{
 							hoggingCount++;
 						}
-						else
-						{
-							hoggingCount--;
-						}
-
 					}
 
-					// Determine hogging state of the first activity by comparison with the usual case
+					// Determine hogging state of the first activity by randomization with the same chance as other similar acts
 					hogging = hoggingCount>0;
 
 				}
@@ -331,6 +344,15 @@ public class VehicleChargingHandler
 	private List<Charger> findSuitableChargers(Coord stopCoord, ElectricVehicle electricVehicle, boolean only_fast_chargers) {
 
 		List<Charger> filteredChargers = new ArrayList<>();
+// charging_behavior_rework
+//
+//		filteredChargers = chargingInfrastructure.getChargers().values().stream()
+//				.filter(charger -> charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId()))		
+//				.filter(charger -> DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius)
+//				.filter(charger -> electricVehicle.getChargerTypes().contains(charger.getChargerType()))
+//				.filter(charger -> charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())
+//               .collect(Collectors.toList());
+
 		List<Charger> allChargers = new ArrayList<>();
 		chargingInfrastructure.getChargers().values().forEach(charger -> {allChargers.add(charger);});
 		
