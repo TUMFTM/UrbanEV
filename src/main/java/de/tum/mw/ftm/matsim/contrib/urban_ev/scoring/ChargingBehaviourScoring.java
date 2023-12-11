@@ -16,6 +16,18 @@ import org.matsim.core.scoring.SumScoringFunction;
 
 public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEventScoring {
 
+   // public enum ScoreComponents {
+   //     RANGE_ANXIETY,
+   //     EMPTY_BATTERY,
+   //     WALKING_DISTANCE,
+   //     HOME_CHARGING,
+   //     ENERGY_BALANCE, 
+   //     OPPORTUNITY_CHARGING, 
+   //     STATION_HOGGING, 
+   //     BATTERY_HEALTH,
+   //     DC_CHARGING
+   // }
+
     private double score;
 
     private static final String CRITICAL_SOC_IDENTIFIER = "criticalSOC";
@@ -65,7 +77,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 ScoreTrigger scoreTrigger = chargingBehaviourScoringEvent.getScoreTrigger(); 
 
                 double soc = chargingBehaviourScoringEvent.getSoc();
-
+                double energydiff = chargingBehaviourScoringEvent.getSoc() - chargingBehaviourScoringEvent.getStartSoc();
                 boolean isEndAct = PlanUtils.isEndAct(activityType);
                 boolean isActStart = scoreTrigger==ScoreTrigger.ACTIVITYSTART;
                 boolean isActEnd = scoreTrigger==ScoreTrigger.ACTIVITYEND;
@@ -73,7 +85,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
                 boolean isHome = PlanUtils.isHome(activityType);
                 boolean isWork = PlanUtils.isWork(activityType);
-                
+                boolean isFastCharging = PlanUtils.isFastCharging(activityType);
                 boolean isPrivateCharging = isCharging&&((isHome&&hasChargerAtHome)||(isWork&&hasChargerAtWork)); 
                 boolean isPublicCharging = !isPrivateCharging;
 
@@ -82,7 +94,10 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 {
                     score += scoreEmptyBattery(soc,time);
                 }
-
+                if(isActEnd && isFastCharging)
+                {
+                    score += scoreFastCharging(time);
+                }
                 // punish battery health stress after any charging activity
                 if(soc>params.optimalSOC && isActEnd && isCharging)
                 {
@@ -96,7 +111,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 }
 
                 // scoring of location choices
-                if(isActStart && isCharging)
+                 if(isActStart && isCharging)
                 {
                     double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                     
@@ -174,7 +189,14 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
 
         return delta_score;
     }
+    private double scoreFastCharging(double time)
+    {
+        // reward charging at home
+        double delta_score = params.utilityOfDCCharging;
+        collectScores(personId, time, ScoreComponents.DC_CHARGING, delta_score);
 
+        return delta_score;
+    }
     private double scoreStationHogging(double time)
     {
         double delta_score = params.marginalUtilityOfStationHogging;

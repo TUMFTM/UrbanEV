@@ -36,7 +36,8 @@ public class ChargerTypeOccupancyTimeProfileCollectorProvider implements Provide
 			TimeProfileCharts.changeSeriesColors(chart,
 					new Color(0, 255, 0), // public
 					new Color(255, 0, 0), // home
-					new Color(0, 0, 255) // work
+					new Color(0, 0, 255), // work
+					new Color(0, 0, 0) // dc
 			);
 		});
 		return collector;
@@ -44,24 +45,29 @@ public class ChargerTypeOccupancyTimeProfileCollectorProvider implements Provide
 
 	public static ProfileCalculator createChargerOccupancyCalculator(
 			final ChargingInfrastructure chargingInfrastructure) {
-		String[] header = { "public", "home", "work"};
+		String[] header = { "public", "home", "work", "dc"};
 		return TimeProfiles.createProfileCalculator(header, () -> {
 			int publicPlugged = 0;
 			int homePlugged = 0;
 			int workPlugged = 0;
+			int dcPlugged = 0;
 			for (Charger c : chargingInfrastructure.getChargers().values()) {
 				ChargingLogic logic = c.getLogic();
 				String chargerId = c.getId().toString();
+				String chargerType = c.getChargerType();
+
 				int plugged = logic.getPluggedVehicles().size();
 				if (chargerId.contains("work")) {
 					workPlugged += plugged;
 				} else if (chargerId.contains("home")) {
 					homePlugged += plugged;
+				} else if (chargerType.contains("dc")) {
+					dcPlugged += plugged;
 				} else {
 					publicPlugged += plugged;
 				}
 			}
-			return new Integer[] { publicPlugged, homePlugged, workPlugged };
+			return new Integer[] { publicPlugged, homePlugged, workPlugged, dcPlugged};
 		});
 	}
 }

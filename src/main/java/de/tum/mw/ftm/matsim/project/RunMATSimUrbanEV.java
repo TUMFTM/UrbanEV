@@ -25,8 +25,9 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
-
+import de.tum.mw.ftm.matsim.contrib.urban_ev.routing.EvNetworkRoutingProvider;
 import java.io.IOException;
+import org.matsim.api.core.v01.TransportMode;
 
 /**
  * Prepares and runs simulation
@@ -62,8 +63,9 @@ public class RunMATSimUrbanEV {
 				configPath = args[0];
 			}
 			else{
-				System.out.println("Config file missing. Please supply a config file path as a program argument.");
-				throw new IOException("Could not start simulation. Config file missing.");
+				configPath = "C:\\models\\urbanev-dc-only\\config.xml";
+				// System.out.println("Config file missing. Please supply a config file path as a program argument.");
+				// throw new IOException("Could not start simulation. Config file missing.");
 			}
 
 		}
@@ -142,6 +144,7 @@ public class RunMATSimUrbanEV {
 		controler.addOverridingModule(new EvModule());
 		controler.addOverridingModule(new AbstractModule() {
 			public void install() {
+				this.addRoutingModuleBinding("dc_charging").toProvider(new EvNetworkRoutingProvider(TransportMode.car));
 				this.installQSimModule(new AbstractQSimModule() {
 					protected void configureQSim() {
 						this.bind(VehicleChargingHandler.class).asEagerSingleton();
@@ -159,7 +162,8 @@ public class RunMATSimUrbanEV {
 			@Override
 			public void install() {
 				addPlanStrategyBinding("ChangeChargingBehaviour").toProvider(ChangeChargingBehaviour.class);
-				addPlanStrategyBinding("FineTuningPlanner").toProvider(FineTuningReplanner.class);
+
+				//addPlanStrategyBinding("FineTuningPlanner").toProvider(FineTuningReplanner.class);
 			}
 		});
 

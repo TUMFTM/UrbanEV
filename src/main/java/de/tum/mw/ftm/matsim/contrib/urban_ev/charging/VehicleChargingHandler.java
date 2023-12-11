@@ -138,15 +138,38 @@ public class VehicleChargingHandler
 
 				if (PlanUtils.isCharging(actType)) {
 					
+					//hier entsteht das Problem !!
+					// hier ist es besser, die Koordinaten des Events zu nutzten 
 					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), time);
-					Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
-
+					//Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
+					Coord activityCoord = event.getCoord();
 					// Location choice
-					List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
-					Charger selectedCharger = suitableChargers.stream()
-						.filter(charger -> charger.getAllowedVehicles().contains(evId))
-                    	.findFirst()
-                    	.orElse(null);
+          
+          //charging_behavior_rework: Post-Merge work neccessary!
+					//List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
+					//Charger selectedCharger = suitableChargers.stream()
+					//	.filter(charger -> charger.getAllowedVehicles().contains(evId))
+          //          	.findFirst()
+          //          	.orElse(null);
+
+					List<Charger> suitableChargers;
+					if(event.getActType()=="car fast charging"){
+						suitableChargers = findSuitableChargers(activityCoord, ev,true);
+					}
+					else{
+						suitableChargers = findSuitableChargers(activityCoord, ev,false);
+					}
+					Charger selectedCharger = null;
+
+					// Use private charger if possible
+					for(Charger charger : suitableChargers)
+					{
+						if (charger.getAllowedVehicles().contains(evId))
+						{
+							selectedCharger = charger;
+							break;
+						}
+					}
 
 					// Select public charger if no private charger is available
 					if(selectedCharger == null)
@@ -318,16 +341,47 @@ public class VehicleChargingHandler
 	 * If a charger is private, only allowed vehicles can charge there
 	 */
 
-	private List<Charger> findSuitableChargers(Coord stopCoord, ElectricVehicle electricVehicle) {
+	private List<Charger> findSuitableChargers(Coord stopCoord, ElectricVehicle electricVehicle, boolean only_fast_chargers) {
 
 		List<Charger> filteredChargers = new ArrayList<>();
+// charging_behavior_rework
+//
+//		filteredChargers = chargingInfrastructure.getChargers().values().stream()
+//				.filter(charger -> charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId()))		
+//				.filter(charger -> DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius)
+//				.filter(charger -> electricVehicle.getChargerTypes().contains(charger.getChargerType()))
+//				.filter(charger -> charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())
+//               .collect(Collectors.toList());
 
-		filteredChargers = chargingInfrastructure.getChargers().values().stream()
-				.filter(charger -> charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId()))		
-				.filter(charger -> DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius)
-				.filter(charger -> electricVehicle.getChargerTypes().contains(charger.getChargerType()))
-				.filter(charger -> charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())
-                .collect(Collectors.toList());
+		List<Charger> allChargers = new ArrayList<>();
+		chargingInfrastructure.getChargers().values().forEach(charger -> {allChargers.add(charger);});
+		
+		chargingInfrastructure.getChargers().values().forEach(charger -> {
+			// filter out private chargers unless vehicle is allowed
+			if (charger.getAllowedVehicles().isEmpty() || charger.getAllowedVehicles().contains(electricVehicle.getId())) {
+				// filter out chargers that are out of range
+				if (DistanceUtils.calculateDistance(stopCoord, charger.getCoord()) < parkingSearchRadius) {
+					// filter out chargers with wrong type
+					//if (electricVehicle.getChargerTypes().contains(charger.getChargerType())) {
+					if (only_fast_chargers == true){
+						if(charger.getChargerType().contains("dc")) {
+							// filter out occupied chargers
+							if ((charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())) {
+								filteredChargers.add(charger);
+							}
+						}
+					}
+					else{
+						if(electricVehicle.getChargerTypes().stream().filter(o -> o.equals(charger.getChargerType())).findFirst().isPresent()){
+							// filter out occupied chargers
+							if ((charger.getLogic().getPluggedVehicles().size() < charger.getPlugCount())) {
+								filteredChargers.add(charger);
+							}
+						}
+					}
+				}
+			}
+		});
 
 		return filteredChargers;
 	}
