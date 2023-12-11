@@ -5,7 +5,7 @@ name: Generative Art Docker Publish
 
 on:
   push:
-    branches: [docker_integration]
+    branches: [charging_behavior_rework]
 jobs:
         
   build_docker_and_push_to_registry:
