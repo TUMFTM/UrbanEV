@@ -243,7 +243,8 @@ public class VehicleChargingHandler
 			Activity activity = PlanUtils.getActivity(plan, event.getTime());
 			Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 
-			ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
+			// ChargingLogicImpl chargingLogic = (ChargingLogicImpl) charger.getLogic();
+			ChargingWithQueueingLogic chargingLogic = (ChargingWithQueueingLogic) charger.getLogic();
 			double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
 
 			unplugVehicle(evId, event.getTime());	

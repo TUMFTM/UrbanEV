@@ -132,13 +132,14 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 						Activity act = (Activity) pe;
 						if(act.getType().contains("charging"))
 						{
+							//ANpassung notwendig, da charging nur eine Dauer hat1 
 							String status = act.getType().contains("failed") ? "failed" : "success";
 							csvPrinter.printRecord(
 								person.getId().toString(),
 								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
 								Double.toString(act.getCoord().getX()),
 								Double.toString(act.getCoord().getY()),
-								Double.toString(act.getEndTime().seconds()),
+								Double.toString(act.getMaximumDuration().seconds()),
 								status
 							);
 						}

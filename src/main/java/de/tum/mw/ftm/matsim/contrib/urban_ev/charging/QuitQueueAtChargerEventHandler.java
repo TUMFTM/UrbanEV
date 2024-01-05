@@ -1,19 +1,9 @@
-/*
-File originally created, published and licensed by contributors of the org.matsim.* project.
-Please consider the original license notice below.
-This is a modified version of the original source code!
-
-Modified 2020 by Lennart Adenaw, Technical University Munich, Chair of Automotive Technology
-email	:	lennart.adenaw@tum.de
-*/
-
-/* ORIGINAL LICENSE
- *  *********************************************************************** *
+/* *********************************************************************** *
  * project: org.matsim.*
  *                                                                         *
  * *********************************************************************** *
  *                                                                         *
- * copyright       : (C) 2015 by the members listed in the COPYING,        *
+ * copyright       : (C) 2016 by the members listed in the COPYING,        *
  *                   LICENSE and WARRANTY file.                            *
  * email           : info at matsim dot org                                *
  *                                                                         *
@@ -29,27 +19,8 @@ email	:	lennart.adenaw@tum.de
 
 package de.tum.mw.ftm.matsim.contrib.urban_ev.charging;
 
-import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
-import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
+import org.matsim.core.events.handler.EventHandler;
 
-import java.util.Collection;
-
-public interface ChargingLogic {
-	interface Factory {
-		ChargingLogic create(Charger charger);
-	}
-
-	void addVehicle(ElectricVehicle ev, double now);
-
-	void addVehicle(ElectricVehicle ev, ChargingListener chargingListener, double now);
-
-	void removeVehicle(ElectricVehicle ev, double now);
-
-	void chargeVehicles(double chargePeriod, double now);
-
-	Collection<ElectricVehicle> getPluggedVehicles();
-
-	Collection<ElectricVehicle> getQueuedVehicles();
-
-	ChargingStrategy getChargingStrategy();
+public interface QuitQueueAtChargerEventHandler extends EventHandler {
+	void handleEvent(QuitQueueAtChargerEvent event);
 }

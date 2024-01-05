@@ -16,6 +16,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.routing.EvNetworkRoutingModule;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Random;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.router.RoutingModule;
 import org.matsim.core.router.TripRouter;

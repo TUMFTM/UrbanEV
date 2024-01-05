@@ -11,6 +11,7 @@ public enum ScoreComponents {
         HOME_CHARGING,
         ENERGY_BALANCE,  
         BATTERY_HEALTH,
-        CHARGING_EFFICIENCY
+        CHARGING_EFFICIENCY,
+        DC_CHARGING
     
 }

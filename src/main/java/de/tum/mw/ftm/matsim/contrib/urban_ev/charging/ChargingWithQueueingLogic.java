@@ -1,14 +1,4 @@
-/*
-File originally created, published and licensed by contributors of the org.matsim.* project.
-Please consider the original license notice below.
-This is a modified version of the original source code!
-
-Modified 2020 by Lennart Adenaw, Technical University Munich, Chair of Automotive Technology
-email	:	lennart.adenaw@tum.de
-*/
-
-/* ORIGINAL LICENSE
-* *********************************************************************** *
+/* *********************************************************************** *
  * project: org.matsim.*
  *                                                                         *
  * *********************************************************************** *
@@ -29,24 +19,27 @@ email	:	lennart.adenaw@tum.de
 
 package de.tum.mw.ftm.matsim.contrib.urban_ev.charging;
 
+import com.google.common.base.Preconditions;
+import org.matsim.api.core.v01.Id;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
-import org.matsim.api.core.v01.Id;
 import org.matsim.core.api.experimental.events.EventsManager;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class ChargingLogicImpl implements ChargingLogic {
-	private final Charger charger;
+public class ChargingWithQueueingLogic implements ChargingLogic {
+	protected final Charger charger;
 	private final ChargingStrategy chargingStrategy;
 	private final EventsManager eventsManager;
 
 	private final Map<Id<ElectricVehicle>, ElectricVehicle> pluggedVehicles = new LinkedHashMap<>();
-	private final Map<Id<ElectricVehicle>, Double> plugInTimestamps = new LinkedHashMap<>();
-	private final Map<Id<ElectricVehicle>, ElectricVehicle> chargingVehicles = new LinkedHashMap<>();
+	private final Queue<ElectricVehicle> queuedVehicles = new LinkedList<>();
+	private final Queue<ElectricVehicle> arrivingVehicles = new LinkedBlockingQueue<>();
 	private final Map<Id<ElectricVehicle>, ChargingListener> listeners = new LinkedHashMap<>();
+	private final Map<Id<ElectricVehicle>, Double> plugInTimestamps = new LinkedHashMap<>();
 
-	public ChargingLogicImpl(Charger charger, ChargingStrategy chargingStrategy, EventsManager eventsManager) {
+	public ChargingWithQueueingLogic(Charger charger, ChargingStrategy chargingStrategy, EventsManager eventsManager) {
 		this.chargingStrategy = Objects.requireNonNull(chargingStrategy);
 		this.charger = Objects.requireNonNull(charger);
 		this.eventsManager = Objects.requireNonNull(eventsManager);
@@ -54,87 +47,107 @@ public class ChargingLogicImpl implements ChargingLogic {
 
 	@Override
 	public void chargeVehicles(double chargePeriod, double now) {
-		Iterator<ElectricVehicle> evIter = chargingVehicles.values().iterator();
+		Iterator<ElectricVehicle> evIter = pluggedVehicles.values().iterator();
 		while (evIter.hasNext()) {
 			ElectricVehicle ev = evIter.next();
+			// with fast charging, we charge around 4% of SOC per minute,
+			// so when updating SOC every 10 seconds, SOC increases by less then 1%
+			//double oldCharge = ev.getBattery().getCharge();
+			//double energy = ev.getChargingPower().calcChargingPower(charger) * chargePeriod;
+			//double newCharge = Math.min(oldCharge + energy, ev.getBattery().getCapacity());
+			//ev.getBattery().setCharge(newCharge);
 			ev.getBattery().changeSoc(ev.getChargingPower().calcChargingPower(charger) * chargePeriod);
+			
+			
+			//eventsManager.processEvent(new EnergyChargedEvent(now, charger.getId(), ev.getId(), newCharge - oldCharge, newCharge));
 
 			if (chargingStrategy.isChargingCompleted(ev)) {
-				eventsManager.processEvent(
-						new ChargingEndEvent(
-								now,
-								charger.getId(),
-								ev.getId(),
-								ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),
-								now-plugInTimestamps.get(ev.getId())));
-				evIter.remove();
+				//evIter.remove();
+				eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
+				//listeners.remove(ev.getId()).notifyChargingEnded(ev, now);
 			}
+		}
+
+		int queuedToPluggedCount = Math.min(queuedVehicles.size(), charger.getPlugCount() - pluggedVehicles.size());
+		for (int i = 0; i < queuedToPluggedCount; i++) {
+			plugVehicle(queuedVehicles.poll(), now);
+		}
+
+		Iterator<ElectricVehicle> arrivingVehiclesIter = arrivingVehicles.iterator();
+		while (arrivingVehiclesIter.hasNext()) {
+			ElectricVehicle ev = arrivingVehiclesIter.next();
+			if (pluggedVehicles.size() < charger.getPlugCount()) {
+				plugVehicle(ev, now);
+			} else {
+				queueVehicle(ev, now);
+			}
+			arrivingVehiclesIter.remove();
 		}
 	}
 
 	@Override
 	public void addVehicle(ElectricVehicle ev, double now) {
-		addVehicle(ev, new ChargingListener() {}, now);
+		addVehicle(ev, new ChargingListener() {
+		}, now);
 	}
 
 	@Override
 	public void addVehicle(ElectricVehicle ev, ChargingListener chargingListener, double now) {
+		arrivingVehicles.add(ev);
 		listeners.put(ev.getId(), chargingListener);
-		if (pluggedVehicles.size() < charger.getPlugCount()) {
-			plugVehicle(ev, now);
-		}
 	}
 
 	@Override
 	public void removeVehicle(ElectricVehicle ev, double now) {
-		if (pluggedVehicles.remove(ev.getId()) != null) { // successfully removed
-			if (chargingVehicles.remove(ev.getId()) != null) {
-				eventsManager.processEvent(
-						new ChargingEndEvent(
-								now,
-								charger.getId(),
-								ev.getId(),
-								ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),
-								now-plugInTimestamps.get(ev.getId())));
-			}
-			eventsManager.processEvent(new UnpluggingEvent(now, charger.getId(), ev.getId(), now-plugInTimestamps.get(ev.getId())));
+		if (pluggedVehicles.remove(ev.getId()) != null) {// successfully removed
+			eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
 			listeners.remove(ev.getId()).notifyChargingEnded(ev, now);
 
-		} else { // not plugged
-			throw new IllegalArgumentException(
-					"Vehicle: " + ev.getId() + " is not plugged at charger: " + charger.getId());
+			if (!queuedVehicles.isEmpty()) {
+				plugVehicle(queuedVehicles.poll(), now);
+			}
+		} else {
+			// make sure ev was in the queue
+			Preconditions.checkState(queuedVehicles.remove(ev), "Vehicle (%s) is neither queued nor plugged at charger (%s)", ev.getId(),
+				charger.getId());
+			eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId()));
 		}
+	}
+
+	private void queueVehicle(ElectricVehicle ev, double now) {
+		queuedVehicles.add(ev);
+		eventsManager.processEvent(new QueuedAtChargerEvent(now, charger.getId(), ev.getId()));
+		listeners.get(ev.getId()).notifyVehicleQueued(ev, now);
 	}
 
 	private void plugVehicle(ElectricVehicle ev, double now) {
 		if (pluggedVehicles.put(ev.getId(), ev) != null) {
 			throw new IllegalArgumentException();
 		}
-		if (chargingVehicles.put(ev.getId(), ev) != null) {
-			throw new IllegalArgumentException();
-		}
+
 		eventsManager.processEvent(new ChargingStartEvent(now, charger.getId(), ev.getId(), charger.getChargerType()));
 		listeners.get(ev.getId()).notifyChargingStarted(ev, now);
 		plugInTimestamps.put(ev.getId(), now);
 	}
 
-	private final Collection<ElectricVehicle> unmodifiablePluggedVehicles = Collections.unmodifiableCollection(
-			pluggedVehicles.values());
+	private final Collection<ElectricVehicle> unmodifiablePluggedVehicles = Collections.unmodifiableCollection(pluggedVehicles.values());
 
 	@Override
 	public Collection<ElectricVehicle> getPluggedVehicles() {
 		return unmodifiablePluggedVehicles;
 	}
 
+	private final Collection<ElectricVehicle> unmodifiableQueuedVehicles = Collections.unmodifiableCollection(queuedVehicles);
+
 	@Override
 	public Collection<ElectricVehicle> getQueuedVehicles() {
-		return null;
+		return unmodifiableQueuedVehicles;
 	}
+
 	@Override
 	public ChargingStrategy getChargingStrategy() {
 		return chargingStrategy;
 	}
-
 	public Map<Id<ElectricVehicle>, Double> getPlugInTimestamps(){
 		return plugInTimestamps;
 	}
