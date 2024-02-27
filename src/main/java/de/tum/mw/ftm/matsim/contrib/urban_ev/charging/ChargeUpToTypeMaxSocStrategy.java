@@ -70,7 +70,7 @@ public class ChargeUpToTypeMaxSocStrategy implements ChargingStrategy {
 
 	public static double getMaxRelativeSoc(Charger charger)
 	{
-		final Map<String,Double> maxRelativeSocByChargerType = Stream.of(new Object[][] {{ "private_ac", 0.8 },{ "public_dc", 0.8 }, { "public_ac", 0.9 }, { "default", 0.5 }}).collect(Collectors.toMap(data -> (String) data[0], data -> (double) data[1]));
+		final Map<String,Double> maxRelativeSocByChargerType = Stream.of(new Object[][] {{ "private_ac", 0.8 },{ "public_dc", 0.8 }, { "dc", 0.8 },{ "public_ac", 0.9 }, { "default", 0.5 }}).collect(Collectors.toMap(data -> (String) data[0], data -> (double) data[1]));
 		return maxRelativeSocByChargerType.getOrDefault(charger.getChargerType(), 1.0);
 	}
 }

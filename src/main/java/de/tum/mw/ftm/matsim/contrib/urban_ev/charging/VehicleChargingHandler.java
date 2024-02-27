@@ -42,7 +42,7 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.ChargingInfrastructu
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ChargingBehaviourScoringEvent.ScoreTrigger;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
-import de.tum.mw.ftm.matsim.contrib.urban_ev.charging.ChargeUpToTypeMaxSocStrategy;
+//import de.tum.mw.ftm.matsim.contrib.urban_ev.charging.ChargeUpToTypeMaxSocStrategy;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
@@ -247,7 +247,8 @@ public class VehicleChargingHandler
 			ChargingWithQueueingLogic chargingLogic = (ChargingWithQueueingLogic) charger.getLogic();
 			double plugInTS = chargingLogic.getPlugInTimestamps().get(evId);
 
-			unplugVehicle(evId, event.getTime());	
+			// unplug after issung the event!
+			//unplugVehicle(evId, event.getTime());	
 			
 			double walkingDistance = DistanceUtils.calculateDistance(activityCoord, charger.getCoord());
 			double pluggedDuration = event.getTime()-plugInTS;
@@ -310,6 +311,8 @@ public class VehicleChargingHandler
 					ScoreTrigger.ACTIVITYEND
 					)
 				);
+			
+				unplugVehicle(evId, event.getTime());	
 		}
 		else
 		{
