@@ -24,7 +24,9 @@ import org.matsim.api.core.v01.Id;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
 import org.matsim.core.api.experimental.events.EventsManager;
-
+import org.matsim.core.mobsim.qsim.agents.WithinDayAgentUtils;
+import org.matsim.core.mobsim.framework.MobsimAgent;
+import org.matsim.core.mobsim.qsim.QSim;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 

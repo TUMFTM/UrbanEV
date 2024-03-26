@@ -148,8 +148,12 @@ public class RunMATSimUrbanEV {
 				this.installQSimModule(new AbstractQSimModule() {
 					protected void configureQSim() {
 						this.bind(VehicleChargingHandler.class).asEagerSingleton();
+						this.addQSimComponentBinding(EvModule.EV_COMPONENT).to(VehicleChargingHandler.class);
+						addMobsimListenerBinding().to(VehicleChargingHandler.class);
+						
 					}
 				});
+				
 			}
 		});
 
