@@ -139,7 +139,8 @@ public class EvMobsimListener implements MobsimBeforeCleanupListener {
 								act.getType().replaceAll("failed", "").replaceAll("charging", "").trim(),
 								Double.toString(act.getCoord().getX()),
 								Double.toString(act.getCoord().getY()),
-								Double.toString(act.getMaximumDuration().seconds()),
+								0,
+								//Double.toString(act.getEndTime().seconds()),
 								status
 							);
 						}

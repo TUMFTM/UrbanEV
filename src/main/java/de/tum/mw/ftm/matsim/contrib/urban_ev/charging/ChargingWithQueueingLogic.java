@@ -24,9 +24,6 @@ import org.matsim.api.core.v01.Id;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.fleet.ElectricVehicle;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.infrastructure.Charger;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.mobsim.qsim.agents.WithinDayAgentUtils;
-import org.matsim.core.mobsim.framework.MobsimAgent;
-import org.matsim.core.mobsim.qsim.QSim;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -36,6 +33,7 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 	private final EventsManager eventsManager;
 
 	private final Map<Id<ElectricVehicle>, ElectricVehicle> pluggedVehicles = new LinkedHashMap<>();
+	private final Map<Id<ElectricVehicle>, ElectricVehicle> plugged_and_finished_Vehicles = new LinkedHashMap<>();
 	private final Queue<ElectricVehicle> queuedVehicles = new LinkedList<>();
 	private final Queue<ElectricVehicle> arrivingVehicles = new LinkedBlockingQueue<>();
 	private final Map<Id<ElectricVehicle>, ChargingListener> listeners = new LinkedHashMap<>();
@@ -58,15 +56,21 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 			//double energy = ev.getChargingPower().calcChargingPower(charger) * chargePeriod;
 			//double newCharge = Math.min(oldCharge + energy, ev.getBattery().getCapacity());
 			//ev.getBattery().setCharge(newCharge);
-			ev.getBattery().changeSoc(ev.getChargingPower().calcChargingPower(charger) * chargePeriod);
+			
 			
 			
 			//eventsManager.processEvent(new EnergyChargedEvent(now, charger.getId(), ev.getId(), newCharge - oldCharge, newCharge));
 
 			if (chargingStrategy.isChargingCompleted(ev)) {
 				//evIter.remove();
-				eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
+				if (plugged_and_finished_Vehicles.containsKey(ev.getId())==false){
+					eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
+					plugged_and_finished_Vehicles.put(ev.getId(), ev);
+				}
 				//listeners.remove(ev.getId()).notifyChargingEnded(ev, now);
+			}
+			else{
+				ev.getBattery().changeSoc(ev.getChargingPower().calcChargingPower(charger) * chargePeriod);
 			}
 		}
 
@@ -102,9 +106,11 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 	@Override
 	public void removeVehicle(ElectricVehicle ev, double now) {
 		if (pluggedVehicles.remove(ev.getId()) != null) {// successfully removed
-			eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
+			
+			//eventsManager.processEvent(new ChargingEndEvent(now, charger.getId(), ev.getId(), ev.getBattery().getSoc()/ ev.getBattery().getCapacity(),now-plugInTimestamps.get(ev.getId())));
 			listeners.remove(ev.getId()).notifyChargingEnded(ev, now);
 			eventsManager.processEvent(new UnpluggingEvent(now, charger.getId(), ev.getId(), now-plugInTimestamps.get(ev.getId())));
+			plugged_and_finished_Vehicles.remove(ev.getId());
 
 			if (!queuedVehicles.isEmpty()) {
 				plugVehicle(queuedVehicles.poll(), now);

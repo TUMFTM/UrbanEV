@@ -77,16 +77,18 @@ import javax.inject.Inject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.Iterator;
 import org.matsim.api.core.v01.population.Activity;
 
 public class VehicleChargingHandler
-		implements ActivityStartEventHandler, ActivityEndEventHandler, QueuedAtChargerEventHandler,QuitQueueAtChargerEventHandler,MobsimBeforeSimStepListener, MobsimInitializedListener, MobsimScopeEventHandler  {
+		implements ActivityStartEventHandler, ActivityEndEventHandler, QueuedAtChargerEventHandler, ChargingEndEventHandler, MobsimBeforeSimStepListener, MobsimScopeEventHandler  {
 
 	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
 
@@ -97,6 +99,7 @@ public class VehicleChargingHandler
 	// State variables
 	private Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = new HashMap<>();
 	private Set<Id<ElectricVehicle>> agentsInChargerQueue = ConcurrentHashMap.newKeySet();
+	private Map<Id<ElectricVehicle>, Double> end_time_stamps = new ConcurrentHashMap<>();
 
 	private final ChargingInfrastructure chargingInfrastructure;
 	private final Network network;
@@ -133,10 +136,7 @@ public class VehicleChargingHandler
 		
 		events.addMobsimScopeHandler(this);
 	}
-    @Override
-    public void notifyMobsimInitialized(MobsimInitializedEvent e) {
-        Netsim mobsim = (Netsim) e.getQueueSimulation() ;
-    }
+    
 	@Override
 	public void handleEvent(ActivityStartEvent event) {
 
@@ -372,34 +372,51 @@ public class VehicleChargingHandler
 		//as PopulationAgentSource does not provide a collection of MobsimAgents and injecting the qsim into this class did not seem like a better solution to me
 		//tschlenther, nov' 23
 		QSim qsim = (QSim) e.getQueueSimulation();
-		for (Id<ElectricVehicle> agentId : agentsInChargerQueue) {
-			MobsimAgent mobsimAgent = qsim.getAgents().get(agentId);
 
-			//ideally, we would have an instance of EditPlans and then call rescheduleCurrentActivityEndtime
-			//but I don't see an easy way to instantiate EditPlans right now,because it needs EditTrips, which needs a lot of heavy-weight infrastructure..
-			PlanElement currentPlanElement = WithinDayAgentUtils.getCurrentPlanElement(mobsimAgent);
-			if (currentPlanElement instanceof Activity) {
-				Activity act = (Activity) currentPlanElement;
-				//Preconditions.checkState(act.getType().endsWith(CHARGING_INTERACTION),
-				//	"agent " + agentId + " is registered as waiting in a charger queue but the currentPlanElement is not an activity of type " + CHARGING_INTERACTION + "!");
-				//EvNetworkRoutingModule models the charging activity with a maximum duration and does not set an end time
-				//This means, we just have to call  WithinDayAgentUtils.resetCaches, because this triggers recalculation of the activity end time
-				//based on the duration and the _current_ simulation time. This means, an adjustment of act.maximumDuration is not needed but rather obsolete and would need to too long extension!
-				//I am not sure, whether this causes some problems later, because the actual activity duration might then be longer than the act.maximumDuration...
-				//tschlenther, nov' 23
-				act.setMaximumDuration(act.getMaximumDuration().orElseThrow(IllegalStateException::new) + 1d);
-				WithinDayAgentUtils.resetCaches(mobsimAgent);
-				WithinDayAgentUtils.rescheduleActivityEnd(mobsimAgent, qsim);
-			} else {
-				throw new IllegalStateException("agent " + agentId + " is registered as waiting in a charger queue but the currentPlanElement is not an activity!");
+		Iterator<Map.Entry<Id<ElectricVehicle>, Double>> iterator = end_time_stamps.entrySet().iterator();
+		while (iterator.hasNext()) {
+			Map.Entry<Id<ElectricVehicle>, Double> entry = iterator.next();
+			Id<ElectricVehicle> id = entry.getKey();
+			Double endTimeStamp = entry.getValue();
+			if (endTimeStamp >= e.getSimulationTime()-2){
+				MobsimAgent mobsimAgent = qsim.getAgents().get(id);
+				//ideally, we would have an instance of EditPlans and then call rescheduleCurrentActivityEndtime
+				//but I don't see an easy way to instantiate EditPlans right now,because it needs EditTrips, which needs a lot of heavy-weight infrastructure..
+				PlanElement currentPlanElement = WithinDayAgentUtils.getCurrentPlanElement(mobsimAgent);
+				if (currentPlanElement instanceof Activity) {
+					Activity act = (Activity) currentPlanElement;
+					//Preconditions.checkState(act.getType().endsWith(CHARGING_INTERACTION),
+					//	"agent " + agentId + " is registered as waiting in a charger queue but the currentPlanElement is not an activity of type " + CHARGING_INTERACTION + "!");
+					//EvNetworkRoutingModule models the charging activity with a maximum duration and does not set an end time
+					//This means, we just have to call  WithinDayAgentUtils.resetCaches, because this triggers recalculation of the activity end time
+					//based on the duration and the _current_ simulation time. This means, an adjustment of act.maximumDuration is not needed but rather obsolete and would need to too long extension!
+					//I am not sure, whether this causes some problems later, because the actual activity duration might then be longer than the act.maximumDuration...
+					//tschlenther, nov' 23
+					act.setEndTime(endTimeStamp);
+					//act.setMaximumDuration(act.getMaximumDuration().orElseThrow(IllegalStateException::new) + 1d);
+					WithinDayAgentUtils.resetCaches(mobsimAgent);
+					WithinDayAgentUtils.rescheduleActivityEnd(mobsimAgent, qsim);
+					iterator.remove();
+				} 
 			}
+			//else {
+			//	throw new IllegalStateException("agent " + id + " is registered as waiting in a charger queue but the currentPlanElement is not an activity!");
+			//}
 		}
+		//remove all entries 
+		//end_time_stamps = new LinkedHashMap<>();
 	}
 
 	@Override
-	public void handleEvent(QuitQueueAtChargerEvent event) {
+	public void handleEvent(ChargingEndEvent event) {
 
-			vehiclesAtChargers.remove(event.getVehicleId());
+			//agentsInChargerQueue.add(event.getVehicleId());
+			// Löschende Logik 
+			end_time_stamps.put(event.getVehicleId(), event.getTime());
+			//System.out.println(event.getVehicleId());
+			//System.out.println(event.getTime());
+			//System.out.println(end_time_stamps);
+
 	}
 
 
