@@ -73,3 +73,7 @@ This project is licensed under the GPL License - see the LICENSE.md file for det
 Please also check the associated article available in the World Electric Vehicle Journal:
 
 Adenaw, L.; Lienkamp, M. Multi-Criteria, Co-Evolutionary Charging Behavior: An Agent-Based Simulation of Urban Electromobility. *World Electr. Veh. J.* **2021**, *12*, 18. https://doi.org/10.3390/wevj12010018 
+
+## Thesis
+
+This branch was used for the doctoral thesis of Lennart Adenaw
