@@ -53,10 +53,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
     public static final String BATTERY_HEALTH_STRESS_UTILITY = "batteryHealthStressUtility";
     static final String BATTERY_HEALTH_STRESS_UTILITY_EXP = "The utility of exceeding the optimal soc to the max (scoring is calculated linearly depending on the offset from the optimal soc)";
 
-    public static final String DC_CHARGING_UTILITY  = "dcChargingUtility";
-    static final String DC_CHARGING_UTILITY_EXP = "The utility of using a fast charger";
-
-
     // DataIO
 
     public static final String VEHICLE_TYPES_FILE = "vehicleTypesFile";
@@ -138,9 +134,6 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @NotNull
     private double batteryHealthStressUtility = -0.1;
-    
-    @NotNull
-    private double dcChargingUtility = -10;
 
     // Charging parameters
     @Positive
@@ -227,13 +220,7 @@ public final class UrbanEVConfigGroup extends ReflectiveConfigGroup {
 
     @StringSetter(HOME_CHARGING_UTILITY)
     public void setHomeChargingUtility(double homeChargingUtility) { this.homeChargingUtility = homeChargingUtility; }
-    
-    @StringGetter(DC_CHARGING_UTILITY)
-    public double getdcChargingUtility() { return dcChargingUtility; }
 
-    @StringSetter(DC_CHARGING_UTILITY)
-    public void setdcChargingUtility(double dcChargingUtility) { this.dcChargingUtility = dcChargingUtility; }
-    
     @StringGetter(SOC_DIFFERENCE_UTILITY)
     public double getSocDifferenceUtility() { return socDifferenceUtility; }
 

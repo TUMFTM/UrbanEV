@@ -18,7 +18,6 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
     public final double batteryHealthStressUtility;
     public final double parkingSearchRadius;
     public final double referenceParkingDistance;
-    public final double utilityOfDCCharging;
 
     private ChargingBehaviourScoringParameters(
             final double marginalUtilityOfRangeAnxiety_soc,
@@ -32,8 +31,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             final double criticalSOCThreshold,
             final double batteryHealthStressUtility,
             final double parkingSearchRadius,
-            final double referenceParkingDistance,
-            final double utilityOfDCCharging) {
+            final double referenceParkingDistance) {
         this.marginalUtilityOfRangeAnxiety_soc = marginalUtilityOfRangeAnxiety_soc;
         this.utilityOfEmptyBattery = utilityOfEmptyBattery;
         this.marginalUtilityOfWalking_m = marginalUtilityOfWalking_m;
@@ -46,7 +44,6 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         this.criticalSOCThreshold = criticalSOCThreshold;
         this.parkingSearchRadius = parkingSearchRadius;
         this.referenceParkingDistance = referenceParkingDistance;
-        this.utilityOfDCCharging = utilityOfDCCharging;
     }
 
     public static final class Builder {
@@ -62,7 +59,6 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
         private double batteryHealthStressUtility;
         private double parkingSearchRadius;
         private double referenceParkingDistance;
-        private double utilityOfDCCharging;
 
         public Builder(final Scenario scenario) {
             this((UrbanEVConfigGroup) scenario.getConfig().getModules().get("urban_ev"));
@@ -81,7 +77,6 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
             batteryHealthStressUtility = configGroup.getBatteryHealthStressUtility();
             parkingSearchRadius = configGroup.getParkingSearchRadius();
             referenceParkingDistance = configGroup.getReferenceParkingDistance();
-            utilityOfDCCharging = configGroup.getdcChargingUtility();
         }
 
         public ChargingBehaviourScoringParameters build() {
@@ -97,8 +92,7 @@ public class ChargingBehaviourScoringParameters implements MatsimParameters {
                     criticalSOCThreshold,
                     batteryHealthStressUtility,
                     parkingSearchRadius,
-                    referenceParkingDistance,
-                    utilityOfDCCharging
+                    referenceParkingDistance
             );
         }
     }
