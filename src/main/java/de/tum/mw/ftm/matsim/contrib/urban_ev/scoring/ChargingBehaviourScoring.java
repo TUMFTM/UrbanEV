@@ -8,6 +8,8 @@ import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PersonUtils;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.utils.PlanUtils;
 import de.tum.mw.ftm.matsim.contrib.urban_ev.scoring.ScoreComponents;
 
+import java.util.List;
+
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Activity;
@@ -40,7 +42,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
     private final boolean opportunityCharging;
     private final boolean hasChargerAtHome;
     private final boolean hasChargerAtWork;
-    
+    private final double number_of_chargings;
 
     final ChargingBehaviourScoringParameters params;
     Person person;
@@ -58,6 +60,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         this.hasChargerAtHome = PersonUtils.hasHomeCharger(person);
         this.hasChargerAtWork = PersonUtils.hasWorkCharger(person);
         this.opportunityCharging = PersonUtils.isOpportunityCharging(person);
+        this.number_of_chargings = Double.parseDouble(person.getAttributes().getAttribute("number_of_chargings").toString());
         
     }
 
@@ -72,6 +75,11 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             String activityType = chargingBehaviourScoringEvent.getActivityType();
             double waitingtime = chargingBehaviourScoringEvent.getwaitingtime();
             double detour = chargingBehaviourScoringEvent.getdetour();
+            //Id<Person> personId = chargingBehaviourScoringEvent.getPersonId();
+            //Person person = population.getPersons().get(personId);
+            
+            List<Integer> fastChargingactivites = PlanUtils.get_fast_charging_activities(person.getSelectedPlan(), 0, null);
+
             // make sure this is not called on unspecified/ini activities
             if(!PlanUtils.isIniAct(activityType))
             {
@@ -83,17 +91,21 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 boolean isActStart = scoreTrigger==ScoreTrigger.ACTIVITYSTART;
                 boolean isActEnd = scoreTrigger==ScoreTrigger.ACTIVITYEND;
                 boolean isCharging = PlanUtils.isCharging(activityType);
-
+                
                 boolean isHome = PlanUtils.isHome(activityType);
                 boolean isWork = PlanUtils.isWork(activityType);
                 boolean isFastCharging = PlanUtils.isFastCharging(activityType);
                 boolean isPrivateCharging = isCharging&&((isHome&&hasChargerAtHome)||(isWork&&hasChargerAtWork)); 
                 boolean isPublicCharging = !isPrivateCharging;
 
-                // punish empty battery at any chance
                 if(soc==0 && (isActStart || isActEnd))
                 {
                     score += scoreEmptyBattery(soc,time);
+                }
+                // Initial plan 
+                if(fastChargingactivites.size() < number_of_chargings)
+                {
+                    score += -100;
                 }
                 //if(isActEnd && isFastCharging)
                 //{

@@ -167,12 +167,6 @@ public class VehicleChargingHandler
 					Coord activityCoord = event.getCoord();
 					// Location choice
           
-          //charging_behavior_rework: Post-Merge work neccessary!
-					//List<Charger> suitableChargers = findSuitableChargers(activityCoord, ev);
-					//Charger selectedCharger = suitableChargers.stream()
-					//	.filter(charger -> charger.getAllowedVehicles().contains(evId))
-          //          	.findFirst()
-          //          	.orElse(null);
 
 					List<Charger> suitableChargers;
 					if(event.getActType()=="car fast charging"){
@@ -399,9 +393,14 @@ public class VehicleChargingHandler
 		//vehiclesAtChargers should normally already contain the vehicle, but assure this nevertheless
 		vehiclesAtChargers.put(event.getVehicleId(), event.getChargerId());
 		Id<ElectricVehicle> driver = event.getVehicleId();
-		String actType = null;
-
 		Id<Person> personId = Id.create(driver, Person.class);
+		Person person = population.getPersons().get(personId);
+		Plan plan = person.getSelectedPlan();
+
+		Activity activity = PlanUtils.getActivity(plan, event.getTime());
+		
+		String actType = activity.getType();
+		
 		Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
 	
 		ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);

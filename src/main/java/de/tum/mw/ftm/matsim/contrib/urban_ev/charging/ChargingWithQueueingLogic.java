@@ -115,14 +115,17 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 			plugged_and_finished_Vehicles.remove(ev.getId());
 
 			if (!queuedVehicles.isEmpty()) {
-				plugVehicle(queuedVehicles.poll(), now);
+				ElectricVehicle ev_new = queuedVehicles.poll();
+				plugVehicle(ev_new, now);
+				eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev_new.getId(),now-queuedTimestamps.get(ev_new.getId())));
 			}
 		} else {
 			// make sure ev was in the queue
 			Preconditions.checkState(queuedVehicles.remove(ev), "Vehicle (%s) is neither queued nor plugged at charger (%s)", ev.getId(), charger.getId());
-			eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId(),now-queuedTimestamps.get(ev.getId())));
+			//eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId(),now-queuedTimestamps.get(ev.getId())));
 		}
 	}
+
 
 	private void queueVehicle(ElectricVehicle ev, double now) {
 		queuedVehicles.add(ev);
