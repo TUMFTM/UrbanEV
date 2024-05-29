@@ -109,11 +109,13 @@ public class ChargerPowerCollector
 				chargingProcess.setUnplugTime(event.getTime());
 				chargingProcess.setPluggedDuration(chargingProcess.getUnplugTime()-chargingProcess.getStartTime());
 				chargingProcess.setChargingRatio(chargingProcess.getChargingDuration()/chargingProcess.getPluggedDuration());
-
-				if(chargingProcess.complete()&&chargingProcess.valid()){
-					logList.add(chargingProcess);
-				} else
-					throw new RuntimeException("Failed to add invalid or incomplete ChargingLogEntry to logList!");
+				
+				logList.add(chargingProcess);
+				
+				//if(chargingProcess.complete()&&chargingProcess.valid()){
+				//	logList.add(chargingProcess);
+				//} else
+				//	throw new RuntimeException("Failed to add invalid or incomplete ChargingLogEntry to logList!");
 			} else
 				throw new RuntimeException(event.getVehicleId().toString() + " has no ongoing charging process at charger " + event.getChargerId().toString());
 
