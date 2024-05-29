@@ -269,7 +269,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         if(soc<=params.criticalSOCThreshold)
         {
             // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-            PersonUtils.setCritical(person);
+            //PersonUtils.setCritical(person);
         }
         
         return delta_score; 
@@ -282,7 +282,7 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         collectScores(personId, time, ScoreComponents.EMPTY_BATTERY, delta_score);
             
         // Add all critical agents to the criticalSOC subpopulation such that they get replanned
-        PersonUtils.setCritical(person);
+        //PersonUtils.setCritical(person);
 
         return delta_score;
     }
