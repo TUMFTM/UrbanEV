@@ -222,15 +222,13 @@ public class PlanUtils {
             Activity current = all_acts.get(i);
             Activity next = all_acts.get(i + 1);
             Activity previous = all_acts.get(i - 1);
-            if (//current.getLinkId().equals(linkId) && 
-				#next.getEndTime().isDefined() && 
+            if (next.getEndTime().isDefined() && 
 				next.getEndTime().seconds() > time&& 
 				previous.getEndTime().isDefined() && 
 				previous.getEndTime().seconds() < time) {
                 return current;
             }
-			if (//current.getLinkId().equals(linkId) && 
-			next.getType().contains("end") &&
+			if (next.getType().contains("end") &&
 			previous.getEndTime().isDefined() && 
 			previous.getEndTime().seconds() < time) {
 			return current;
