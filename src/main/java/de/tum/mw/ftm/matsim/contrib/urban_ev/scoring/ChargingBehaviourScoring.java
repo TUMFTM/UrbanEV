@@ -70,7 +70,8 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
             ChargingBehaviourScoringEvent chargingBehaviourScoringEvent = (ChargingBehaviourScoringEvent) event;
             double time = chargingBehaviourScoringEvent.getTime();
             String activityType = chargingBehaviourScoringEvent.getActivityType();
-            
+            double waitingtime = chargingBehaviourScoringEvent.getwaitingtime();
+            double detour = chargingBehaviourScoringEvent.getdetour();
             // make sure this is not called on unspecified/ini activities
             if(!PlanUtils.isIniAct(activityType))
             {
@@ -94,53 +95,61 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
                 {
                     score += scoreEmptyBattery(soc,time);
                 }
-                if(isActEnd && isFastCharging)
+                //if(isActEnd && isFastCharging)
+                //{
+                //    score += scoreFastCharging(time);
+                //}
+                if(waitingtime>0.0)
                 {
-                    score += scoreFastCharging(time);
+                     score += scoreWaiting(waitingtime,time);
                 }
-                // punish battery health stress after any charging activity
-                if(soc>params.optimalSOC && isActEnd && isCharging)
+                if(detour>0.0)
                 {
-                    score += scoreBatteryHealth(soc,time);
+                     score += scoreDetour(detour,time);
                 }
+                // // punish battery health stress after any charging activity
+                // if(soc>params.optimalSOC && isActEnd && isCharging)
+                // {
+                //     score += scoreBatteryHealth(soc,time);
+                // }
 
-                // punish range anxiety after any activity
-                if(soc>0.0 && soc<= params.optimalSOC && isActEnd)
-                {
-                    score += scoreRangeAnxiety(soc,time);
-                }
+                // // punish range anxiety after any activity
+                // if(soc>0.0 && soc<= params.optimalSOC && isActEnd)
+                // {
+                //     score += scoreRangeAnxiety(soc,time);
+                // }
 
-                // scoring of location choices
-                 if(isActStart && isCharging)
-                {
-                    double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
+                // // scoring of location choices
+                //  if(isActStart && isCharging)
+                // {
+                //     double walkingDistance = chargingBehaviourScoringEvent.getWalkingDistance();
                     
-                    // punish walking distance if
-                    // a person charges and has to walk longer than the assumed baseline distance 
-                    // and is not a person that charges publicly at home due to not having a private charger at home
-                    if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
-                        score += scoreWalking(walkingDistance,time);                
-                    }
+                //     // punish walking distance if
+                //     // a person charges and has to walk longer than the assumed baseline distance 
+                //     // and is not a person that charges publicly at home due to not having a private charger at home
+                //     if (walkingDistance>params.referenceParkingDistance) { // Todo: Re-evaluate -> && !(!hasChargerAtHome && activityType.contains("home"))
+                //         score += scoreWalking(walkingDistance,time);                
+                //     }
 
-                    // reward charging at home
-                    if (hasChargerAtHome&&isHome) {
-                        score += scoreHomeCharging(time);
-                    }
+                //     // reward charging at home
+                //     if (hasChargerAtHome&&isHome) {
+                //         score += scoreHomeCharging(time);
+                //     }
 
-                }
+                // }
                 
-                if(isActEnd && isCharging)
-                {
-                    // Scoring of charging hogging                    
-                    if(
-                        chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
-                        isPublicCharging // and charging was performed publicly
-                        ) 
-                    {
-                        score += scoreStationHogging(time);
-                    }
+                // if(isActEnd && isCharging)
+                // {
+                //     // Scoring of charging hogging                    
+                //     if(
+                //         chargingBehaviourScoringEvent.isHogging() && // If the vehicle is plugged for an excessive duration
+                //         isPublicCharging // and charging was performed publicly
+                //         ) 
+                //     {
+                //         score += scoreStationHogging(time);
+                //     }
                         
-                }
+                // }
                 
                 // Scoring on last activity
                 if (isEndAct)
@@ -180,7 +189,30 @@ public class ChargingBehaviourScoring implements SumScoringFunction.ArbitraryEve
         
         return delta_score;
     }
-
+    private double scoreWaiting(double waitingtime, double time) {
+        // Assuming time is given in minutes
+        double disutilityPerMinute = -1.0;
+    
+        // Calculate the disutility based on time
+        double delta_score = disutilityPerMinute * waitingtime;
+    
+        // Collect the score
+        collectScores(personId, time, ScoreComponents.WAITING_TIME, delta_score);
+    
+        return delta_score;
+    }
+    private double scoreDetour(double distance,double time) {
+        // Assuming time is given in minutes
+        double disutilityPerMeter = -0.01;
+    
+        // Calculate the disutility based on time
+        double delta_score = disutilityPerMeter * distance;
+    
+        // Collect the score
+        collectScores(personId, time, ScoreComponents.DETOUR, delta_score);
+    
+        return delta_score;
+    }
     private double scoreHomeCharging(double time)
     {
         // reward charging at home

@@ -1,5 +1,6 @@
 package de.tum.mw.ftm.matsim.contrib.urban_ev.utils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -7,9 +8,13 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.api.core.v01.population.Leg;
 
 public class PlanUtils {
 	
@@ -28,6 +33,16 @@ public class PlanUtils {
         .stream()
         .filter(f -> f instanceof Activity)
         .map(pe -> (Activity) pe)
+        .collect(Collectors.toList());
+        
+    }
+	public static List<Leg> getLegs(Plan plan){
+
+        return plan
+        .getPlanElements()
+        .stream()
+        .filter(f -> f instanceof Leg)
+        .map(pe -> (Leg) pe)
         .collect(Collectors.toList());
         
     }
@@ -148,7 +163,104 @@ public class PlanUtils {
 		.findFirst()
 		.orElse(all_acts.get(all_acts.size()-1));
 	}
+	// .get(0).getTravelTime().isDefined()
 
+	public static List<Integer> get_non_fast_charging_legs(Plan plan, double time, Id<Link> linkId) {
+		//    ---- previous 
+		//		|  current_leg
+		//		|
+		//	  ---- current
+		//
+        List<Leg> all_legs = getLegs(plan);
+		List<Activity> all_acts = getActivities(plan);
+        List<Integer> list = new ArrayList<>();
+		Integer counter = 0;
+        for (int i = 1; i < all_acts.size(); i++) {
+            Activity current = all_acts.get(i);
+			Activity previous = all_acts.get(i - 1);
+			Leg current_leg = all_legs.get(i-1);
+            
+            if ((! current.getType().contains("car fast charging")) &&
+				(! previous.getType().contains("car fast charging"))
+			) {
+				if(current_leg.getTravelTime().isDefined()){
+					list.add(i-1);
+				}
+				counter = counter + 1;
+				
+            }
+		}
+        
+       return list; 
+    }
+	public static List<Integer> get_fast_charging_activities(Plan plan, double time, Id<Link> linkId) {
+        
+        List<Leg> all_legs = getLegs(plan);
+		List<Activity> all_acts = getActivities(plan);
+        List<Integer> list = new ArrayList<>();
+		Integer counter = 0;
+        for (int i = 1; i < all_acts.size(); i++) {
+            Activity current = all_acts.get(i);
+			//Activity previous = all_acts.get(i - 1);
+			//Leg current_leg = all_legs.get(i-1);
+            
+            if (current.getType().contains("car fast charging")
+			) {
+				list.add(i);
+				counter = counter + 1;
+				
+            }
+		}
+        
+       return list; 
+    }
+	public static Activity getActivity_with_link(Plan plan, double time, Id<Link> linkId) {
+		//TODO: Integrate place for check
+        List<Activity> all_acts = getActivities(plan);
+        
+        for (int i = 1; i < all_acts.size()-1; i++) {
+            Activity current = all_acts.get(i);
+            Activity next = all_acts.get(i + 1);
+            Activity previous = all_acts.get(i - 1);
+            if (//current.getLinkId().equals(linkId) && 
+				#next.getEndTime().isDefined() && 
+				next.getEndTime().seconds() > time&& 
+				previous.getEndTime().isDefined() && 
+				previous.getEndTime().seconds() < time) {
+                return current;
+            }
+			if (//current.getLinkId().equals(linkId) && 
+			next.getType().contains("end") &&
+			previous.getEndTime().isDefined() && 
+			previous.getEndTime().seconds() < time) {
+			return current;
+		}
+        }
+        
+        // If no activity meets the criteria, return the last activity
+        return all_acts.get(all_acts.size() - 1);
+    }
+	public static Activity getDCchargingactivity(Plan plan, double time) {
+		//TODO: Integrate place for check
+        List<Activity> all_acts = getActivities(plan);
+        
+        for (int i = 1; i < all_acts.size()-1; i++) {
+            Activity current = all_acts.get(i);
+            Activity next = all_acts.get(i + 1);
+            Activity previous = all_acts.get(i - 1);
+            if (//current.getLinkId().equals(linkId) && 
+				//next.getEndTime().isDefined() && 
+				//next.getEndTime().seconds() > time&& 
+				current.getType() == "car fast charging" && 
+				previous.getEndTime().isDefined() && 
+				previous.getEndTime().seconds() < time) {
+                return current;
+            }
+        }
+        
+        // If no activity meets the criteria, return the last activity
+        return all_acts.get(all_acts.size() - 1);
+    }
 	public static void addRandomChargingActivity(List<Activity> potential_add_acts) {
         // select random activity without charging and change to activity with charging
         if (!potential_add_acts.isEmpty()) {

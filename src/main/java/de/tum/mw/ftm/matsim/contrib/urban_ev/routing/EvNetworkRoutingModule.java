@@ -151,8 +151,9 @@ public final class EvNetworkRoutingModule implements RoutingModule {
 						
 						//toDo: Fehler finden!!! 
 					List<ChargerSpecification> nearestChargers = straightLineKnnFinder.findNearest(stopLocation,chargingInfrastructureSpecification.getChargerSpecifications().values().stream().filter(charger -> charger.getChargerType().contains("dc")));
+					
+					ChargerSpecification selectedCharger = nearestChargers.get(random.nextInt(nearestChargers.size()));
 
-					ChargerSpecification selectedCharger = nearestChargers.get(random.nextInt(1));
 					Link selectedChargerLink =NetworkUtils.getNearestLink(network, selectedCharger.getCoord());
 					Facility nexttoFacility = new LinkWrapperFacility(selectedChargerLink);
 					if (nexttoFacility.getLinkId().equals(lastFrom.getLinkId())) {
@@ -169,7 +170,7 @@ public final class EvNetworkRoutingModule implements RoutingModule {
 					// FS: Adjustment
 
 					Activity chargeAct = PopulationUtils.createActivityFromCoordAndLinkId("car fast charging",selectedCharger.getCoord(),selectedChargerLink.getId());
-
+					//chargeAct.getAttributes().putAttribute("Umweg")
 					double maxPowerEstimate = Math.min(selectedCharger.getPlugPower(), ev.getBatteryCapacity() / 3.6);
 					//orig: double estimatedChargingTime = (ev.getBatteryCapacity() * 1.5) / maxPowerEstimate;
 					double estimatedChargingTime = (ev.getBatteryCapacity() * 5) / maxPowerEstimate;

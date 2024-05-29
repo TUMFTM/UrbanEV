@@ -21,7 +21,7 @@ import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
 import org.matsim.core.router.util.TravelTime;
-
+import org.matsim.api.core.v01.population.Leg;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;

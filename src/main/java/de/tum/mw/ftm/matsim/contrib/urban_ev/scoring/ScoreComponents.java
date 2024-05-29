@@ -12,6 +12,8 @@ public enum ScoreComponents {
         ENERGY_BALANCE,  
         BATTERY_HEALTH,
         CHARGING_EFFICIENCY,
-        DC_CHARGING
+        DC_CHARGING,
+        WAITING_TIME,
+        DETOUR
     
 }

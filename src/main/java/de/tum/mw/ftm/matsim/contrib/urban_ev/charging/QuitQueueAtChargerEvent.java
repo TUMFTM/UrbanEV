@@ -30,14 +30,18 @@ public class QuitQueueAtChargerEvent extends Event {
 	public static final String EVENT_TYPE = "quit_queue_at_charger";
 	public static final String ATTRIBUTE_CHARGER = "charger";
 	public static final String ATTRIBUTE_VEHICLE = "vehicle";
+	public static final String ATTRIBUTE_WAITING = "waiting_time";
 
 	private final Id<Charger> chargerId;
 	private final Id<ElectricVehicle> vehicleId;
+	private final double waitingtime;
 
-	public QuitQueueAtChargerEvent(double time, Id<Charger> chargerId, Id<ElectricVehicle> vehicleId) {
+
+	public QuitQueueAtChargerEvent(double time, Id<Charger> chargerId, Id<ElectricVehicle> vehicleId, double waitingtime) {
 		super(time);
 		this.chargerId = chargerId;
 		this.vehicleId = vehicleId;
+		this.waitingtime = waitingtime;
 	}
 
 	public Id<Charger> getChargerId() {
@@ -46,6 +50,9 @@ public class QuitQueueAtChargerEvent extends Event {
 
 	public Id<ElectricVehicle> getVehicleId() {
 		return vehicleId;
+	}
+	public double waitingtime() {
+		return waitingtime;
 	}
 
 	@Override
@@ -58,6 +65,7 @@ public class QuitQueueAtChargerEvent extends Event {
 		Map<String, String> attr = super.getAttributes();
 		attr.put(ATTRIBUTE_CHARGER, chargerId.toString());
 		attr.put(ATTRIBUTE_VEHICLE, vehicleId.toString());
+		attr.put(ATTRIBUTE_WAITING, Double.toString(this.waitingtime));
 		return attr;
 	}
 }

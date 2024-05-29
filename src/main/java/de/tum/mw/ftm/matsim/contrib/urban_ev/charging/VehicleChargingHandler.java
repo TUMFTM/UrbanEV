@@ -88,7 +88,7 @@ import java.util.Iterator;
 import org.matsim.api.core.v01.population.Activity;
 
 public class VehicleChargingHandler
-		implements ActivityStartEventHandler, ActivityEndEventHandler, QueuedAtChargerEventHandler, ChargingEndEventHandler, MobsimBeforeSimStepListener, MobsimScopeEventHandler  {
+		implements ActivityStartEventHandler, ActivityEndEventHandler, QueuedAtChargerEventHandler, QuitQueueAtChargerEventHandler, ChargingEndEventHandler, MobsimBeforeSimStepListener, MobsimScopeEventHandler  {
 
 	private static final Logger log = Logger.getLogger(VehicleChargingHandler.class);
 
@@ -154,12 +154,15 @@ public class VehicleChargingHandler
 				double walkingDistance = 0.0;
 				double soc = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
 				double time = event.getTime();			
-
+				double detour = 0.0;
+				Activity activity;
 				if (PlanUtils.isCharging(actType)) {
 					
 					//hier entsteht das Problem !!
 					// hier ist es besser, die Koordinaten des Events zu nutzten 
-					Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), time);
+					//Activity activity = PlanUtils.getActivity(person.getSelectedPlan(), time);
+					//Activity activity = PlanUtils.getActivity_with_link(person.getSelectedPlan(), time,event.getLinkId());
+					
 					//Coord activityCoord = activity != null ? activity.getCoord() : network.getLinks().get(event.getLinkId()).getCoord();
 					Coord activityCoord = event.getCoord();
 					// Location choice
@@ -173,9 +176,21 @@ public class VehicleChargingHandler
 
 					List<Charger> suitableChargers;
 					if(event.getActType()=="car fast charging"){
+						activity = PlanUtils.getDCchargingactivity(person.getSelectedPlan(), time);
+						if (activity.getType()=="car fast charging" ){
+							if (activity.getAttributes().size()>0){
+								detour = Double.parseDouble(activity.getAttributes().getAttribute("detour").toString());
+							} else{
+								detour = 0.0;
+							}
+							
+						}
+						
 						suitableChargers = findSuitableChargers(activityCoord, ev,true);
 					}
 					else{
+						detour = 0.0;
+						activity = PlanUtils.getActivity(person.getSelectedPlan(), time);
 						suitableChargers = findSuitableChargers(activityCoord, ev,false);
 					}
 					Charger selectedCharger = null;
@@ -202,11 +217,11 @@ public class VehicleChargingHandler
 						vehiclesAtChargers.put(evId, selectedCharger.getId());
 						walkingDistance = DistanceUtils.calculateDistance(
 								activityCoord, selectedCharger.getCoord());
-					} else {
+					//} else {
 						// if no charger was found, or charging would be ineffective, mark as failed attempt in plan if not already marked
-						if (activity != null) {
-							PlanUtils.setFailed(activity);
-						}
+						//if (activity != null) {
+						//	PlanUtils.setFailed(activity);
+						//}
 					}
 				}
 
@@ -223,6 +238,8 @@ public class VehicleChargingHandler
 					walkingDistance,
 					0.0,
 					false,
+					0.0,
+					detour,
 					ScoreTrigger.ACTIVITYSTART
 					)
 					);
@@ -248,7 +265,15 @@ public class VehicleChargingHandler
 		// Map<Id<ElectricVehicle>, Id<Charger>> vehiclesAtChargers = chargingInfrastructure.getChargers().values().stream()
         // .flatMap(a -> a.getLogic().getPluggedVehicles().stream())
         // .collect(Collectors.toMap(ElectricVehicle::getId, a -> a.getId()));
+		
+		//TODO: Fertig! -> Bewertungsfunktion
 
+		if(event.getActType()=="car fast charging"){
+			Person person = population.getPersons().get(personId);
+			Plan plan = person.getSelectedPlan();
+
+			Activity activity = PlanUtils.getActivity(plan, event.getTime());
+		}
 		// If the vehicle is currently plugged in
 		if(vehiclesAtChargers.containsKey(evId))
 		{
@@ -327,6 +352,8 @@ public class VehicleChargingHandler
 					walkingDistance,
 					pluggedDuration,
 					hogging,
+					0.0,
+					0.0,
 					ScoreTrigger.ACTIVITYEND
 					)
 				);
@@ -346,6 +373,8 @@ public class VehicleChargingHandler
 						0.0,
 						0.0,
 						false,
+						0.0,
+						0.0,
 						ScoreTrigger.ACTIVITYEND
 						)
 					);
@@ -363,7 +392,40 @@ public class VehicleChargingHandler
 			agentsInChargerQueue.add(driver);
 		} // else this vehicle is driven by a DynAgent (who did not leave the vehicle for charging)
 	}
+	
+	//Ergänzungen activity end extension
+	@Override
+	public void handleEvent(QuitQueueAtChargerEvent event) {
+		//vehiclesAtChargers should normally already contain the vehicle, but assure this nevertheless
+		vehiclesAtChargers.put(event.getVehicleId(), event.getChargerId());
+		Id<ElectricVehicle> driver = event.getVehicleId();
+		String actType = null;
 
+		Id<Person> personId = Id.create(driver, Person.class);
+		Id<ElectricVehicle> evId = Id.create(personId, ElectricVehicle.class);
+	
+		ElectricVehicle ev = electricFleet.getElectricVehicles().get(evId);
+		double startSoc = 0.0;
+		double socUponDeparture = ev.getBattery().getSoc() / ev.getBattery().getCapacity();
+		double time = event.getTime();
+		double waitingtime = event.waitingtime();
+		//TODO: Fertig! -> Bewertungsfunktion
+		eventsManager.processEvent(
+			new ChargingBehaviourScoringEvent(
+				time,
+				personId,
+				actType,
+				socUponDeparture,
+				startSoc,
+				0.0,
+				0.0,
+				false,
+				waitingtime,
+				0.0,
+				ScoreTrigger.ACTIVITYEND
+				)
+			);
+	}
 	@Override
 	public void notifyMobsimBeforeSimStep(@SuppressWarnings("rawtypes") MobsimBeforeSimStepEvent e) {
 		//TODO only do this every <evConfig.chargeTimeStep> seconds ??
@@ -394,7 +456,7 @@ public class VehicleChargingHandler
 					//tschlenther, nov' 23
 					act.setEndTime(endTimeStamp);
 					//act.setMaximumDuration(act.getMaximumDuration().orElseThrow(IllegalStateException::new) + 1d);
-					WithinDayAgentUtils.resetCaches(mobsimAgent);
+					//WithinDayAgentUtils.resetCaches(mobsimAgent);
 					WithinDayAgentUtils.rescheduleActivityEnd(mobsimAgent, qsim);
 					iterator.remove();
 				} 
@@ -413,23 +475,11 @@ public class VehicleChargingHandler
 			//agentsInChargerQueue.add(event.getVehicleId());
 			// Löschende Logik 
 			end_time_stamps.put(event.getVehicleId(), event.getTime());
-			//System.out.println(event.getVehicleId());
-			//System.out.println(event.getTime());
-			//System.out.println(end_time_stamps);
 
 	}
 
 
-	// @Override
-	// public void handleEvent(ChargingEndEvent event) {
-	//	// vehiclesAtChargers.remove(event.getVehicleId());
-	//	// Charging has ended before activity ends
-	// }
 
-	/**
-	 * Tries to find the closest free chargers of fitting type in vicinity of activity location
-	 * If a charger is private, only allowed vehicles can charge there
-	 */
 
 	private List<Charger> findSuitableChargers(Coord stopCoord, ElectricVehicle electricVehicle, boolean only_fast_chargers) {
 

@@ -38,7 +38,7 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 	private final Queue<ElectricVehicle> arrivingVehicles = new LinkedBlockingQueue<>();
 	private final Map<Id<ElectricVehicle>, ChargingListener> listeners = new LinkedHashMap<>();
 	private final Map<Id<ElectricVehicle>, Double> plugInTimestamps = new LinkedHashMap<>();
-
+	private final Map<Id<ElectricVehicle>, Double> queuedTimestamps = new LinkedHashMap<>();
 	public ChargingWithQueueingLogic(Charger charger, ChargingStrategy chargingStrategy, EventsManager eventsManager) {
 		this.chargingStrategy = Objects.requireNonNull(chargingStrategy);
 		this.charger = Objects.requireNonNull(charger);
@@ -76,7 +76,9 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 
 		int queuedToPluggedCount = Math.min(queuedVehicles.size(), charger.getPlugCount() - pluggedVehicles.size());
 		for (int i = 0; i < queuedToPluggedCount; i++) {
-			plugVehicle(queuedVehicles.poll(), now);
+			ElectricVehicle ev = queuedVehicles.poll();
+			plugVehicle(ev, now);
+			eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId(),now-queuedTimestamps.get(ev.getId())));
 		}
 
 		Iterator<ElectricVehicle> arrivingVehiclesIter = arrivingVehicles.iterator();
@@ -118,12 +120,13 @@ public class ChargingWithQueueingLogic implements ChargingLogic {
 		} else {
 			// make sure ev was in the queue
 			Preconditions.checkState(queuedVehicles.remove(ev), "Vehicle (%s) is neither queued nor plugged at charger (%s)", ev.getId(), charger.getId());
-			eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId()));
+			eventsManager.processEvent(new QuitQueueAtChargerEvent(now, charger.getId(), ev.getId(),now-queuedTimestamps.get(ev.getId())));
 		}
 	}
 
 	private void queueVehicle(ElectricVehicle ev, double now) {
 		queuedVehicles.add(ev);
+		queuedTimestamps.put(ev.getId(), now);
 		eventsManager.processEvent(new QueuedAtChargerEvent(now, charger.getId(), ev.getId()));
 		listeners.get(ev.getId()).notifyVehicleQueued(ev, now);
 	}

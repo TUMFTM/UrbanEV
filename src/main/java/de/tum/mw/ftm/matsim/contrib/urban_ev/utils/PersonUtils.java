@@ -10,6 +10,7 @@ public class PersonUtils {
     public static final String WORK_CHARGER_POWER_ATTR = "workChargerPower";
     public static final String OPPORTUNITY_CHARGING_ATTR = "opportunityCharging";
     public static final String SUBPOPULATION_ATTR = "subpopulation";
+    public static final String number_charging_activities = "number_of_chargings";
 
     public static boolean hasAttr(Person person, String attr)
     {
@@ -56,6 +57,12 @@ public class PersonUtils {
     {
         double workChargerPower = hasAttr(person, WORK_CHARGER_POWER_ATTR) ? ((Double) getAttr(person, WORK_CHARGER_POWER_ATTR)).doubleValue() : 0.0;
         return workChargerPower;
+    }
+
+    public static double getNumberofChargingActs(Person person)
+    {
+        double number = hasAttr(person, number_charging_activities) ? ((Double) getAttr(person, number_charging_activities)).doubleValue() : 0.0;
+        return number;
     }
 
     public static boolean hasHomeCharger(Person person)

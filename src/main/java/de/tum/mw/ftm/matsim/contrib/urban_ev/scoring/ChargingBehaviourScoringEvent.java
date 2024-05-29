@@ -22,7 +22,9 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
     private String activityType;
     private Double startSoc;
     private Double pluggedDuration;
-    private boolean hogging; 
+    private boolean hogging;
+    private Double waitingtime;
+    private Double detour; 
     private ScoreTrigger scoreTrigger;
 
     public ChargingBehaviourScoringEvent(
@@ -34,6 +36,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         Double walkingDistance,
         Double pluggedDuration, 
         boolean hogging,
+        Double waitingtime,
+        Double detour,
         ScoreTrigger scoreTrigger        
         ) 
     {
@@ -45,6 +49,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         this.walkingDistance = walkingDistance;
         this.pluggedDuration = pluggedDuration;
         this.hogging = hogging;
+        this.waitingtime = waitingtime;
+        this.detour = detour;
         this.scoreTrigger = scoreTrigger;
     }
 
@@ -63,6 +69,10 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
     public Double getWalkingDistance() { return walkingDistance; }
     
     public Double getPluggedDuration() { return pluggedDuration; }
+    
+    public Double getdetour() { return detour; }
+    
+    public Double getwaitingtime() { return waitingtime; }
 
     public boolean isHogging() { return hogging; }
 
@@ -79,6 +89,8 @@ public class ChargingBehaviourScoringEvent extends Event implements HasPersonId 
         attributes.put("walkingDistance", getWalkingDistance().toString());
         attributes.put("pluggedDuration", getPluggedDuration().toString());
         attributes.put("hogging", Boolean.toString(isHogging()));
+        attributes.put("detour", getdetour().toString());
+        attributes.put("waitingtime", getwaitingtime().toString());
         attributes.put("scoreTrigger", getScoreTrigger().name());
 
         return attributes;
