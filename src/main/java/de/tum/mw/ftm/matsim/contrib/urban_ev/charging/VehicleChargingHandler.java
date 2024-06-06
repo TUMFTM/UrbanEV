@@ -455,7 +455,7 @@ public class VehicleChargingHandler
 					//tschlenther, nov' 23
 					act.setEndTime(endTimeStamp);
 					//act.setMaximumDuration(act.getMaximumDuration().orElseThrow(IllegalStateException::new) + 1d);
-					//WithinDayAgentUtils.resetCaches(mobsimAgent);
+					WithinDayAgentUtils.resetCaches(mobsimAgent);
 					WithinDayAgentUtils.rescheduleActivityEnd(mobsimAgent, qsim);
 					iterator.remove();
 				} 
