@@ -152,6 +152,8 @@ public final class EvNetworkRoutingModule implements RoutingModule {
 						//toDo: Fehler finden!!! 
 					List<ChargerSpecification> nearestChargers = straightLineKnnFinder.findNearest(stopLocation,chargingInfrastructureSpecification.getChargerSpecifications().values().stream().filter(charger -> charger.getChargerType().contains("dc")));
 					
+					if (nearestChargers.size() < 1) {return basicRoute;} 
+					
 					ChargerSpecification selectedCharger = nearestChargers.get(random.nextInt(nearestChargers.size()));
 
 					Link selectedChargerLink =NetworkUtils.getNearestLink(network, selectedCharger.getCoord());
